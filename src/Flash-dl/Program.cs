@@ -22,40 +22,47 @@ namespace Flash_dl
         static void Main(string[] args)
         {
             UpdateTitle();
-
             bool menu = true;
             while (menu)
             {
                 Console.Write("flash-dl > ");
-                String url = Console.ReadLine();
+                string url = Console.ReadLine();
 
-                IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url, false);
-
-                if (url.Contains("-"))
+                try
                 {
-                    var customCommand = url.Remove(0, 45).ToLower();
-                    // Handle all commands without arguments
-                    switch (customCommand)
+                    IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url, false);
+
+                    if (url.Contains("-"))
                     {
-                        case "help":
-                            Help();
-                            return;
-                        case "v":
-                            DownloadVideo(videoInfos);
-                            return;
-                        case "a":
-                           // DownloadAudio();
-                            return;
-                        case "pl":
-                            //DownloadPlaylist();
-                            return;
-                        default:
-                            Console.WriteLine("Invalid command.");
-                            goto case "help";
+                        //TODO: there must be a better way to do this
+                        var customCommand = url.Remove(0, 45).ToLower();
+                        // Handle all commands without arguments
+                        switch (customCommand)
+                        {
+                            case "help":
+                                Help();
+                                return;
+                            case "v":
+                                DownloadVideo(videoInfos);
+                                return;
+                            case "a":
+                                DownloadAudio(videoInfos);
+                                return;
+                            default:
+                                Console.WriteLine("Invalid command.");
+                                goto case "help";
+                        }
                     }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    Help();
                 }
             }
         }
+
+        #region Private helpers
 
         private static void UpdateTitle()
         {
@@ -65,8 +72,7 @@ namespace Flash_dl
         private static void Help()
         {
             Console.WriteLine(string.Format("{0} {1}", applicationName, applicationVersionVerboseName));
-            Console.WriteLine("Youtube: - [url] -[v]ideo|-[a]udio|-[pl]aylist");
-            Console.ReadLine();
+            Console.WriteLine("Youtube: - [url] -[v]ideo|-[a]udio");
         }
 
         private static void DownloadVideo(IEnumerable<VideoInfo> videoInfos)
@@ -83,7 +89,7 @@ namespace Flash_dl
                 DownloadUrlResolver.DecryptDownloadUrl(video);
             }
 
-            var videoDownloader = new VideoDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), GetSafeTitle(video.Title) + video.VideoExtension));
+            var videoDownloader = new VideoDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), GetSafeTitle(video.Title) + video.VideoExtension));
             videoDownloader.DownloadProgressChanged += videoDownloader_DownloadProgressChanged;
 
             videosToDownload.Add(videoDownloader);
@@ -110,49 +116,51 @@ namespace Flash_dl
             }
         }
 
-        //private static void DownloadAudio(IEnumerable<VideoInfo> videoInfos)
-        //{
+        private static void DownloadAudio(IEnumerable<VideoInfo> videoInfos)
+        {
+            //  Our list of videos to download:
+            List<AudioDownloader> audioToDownload = new List<AudioDownloader>();
 
-        //}
+            // Console.WriteLine("Single video url '{0}' was specified.  Processing...", options.VideoUrl);
+            VideoInfo video = videoInfos.Where(info => info.CanExtractAudio).OrderByDescending(info => info.AudioBitrate).First();
 
-        //private static void DownloadPlaylist()
-        //{
-        //    //  Our list of videos to download:
-        //    List<VideoDownloader> videosToDownload = new List<VideoDownloader>();
+            // If the video has a decrypted signature, decipher it
+            if (video.RequiresDecryption)
+            {
+                DownloadUrlResolver.DecryptDownloadUrl(video);
+            }
 
-        //    List<VideoInfo> videos = VideoList.FromYouTubePlaylist(options.Playlist, options.Resolution);
+            var audioDownloader = new AudioDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), GetSafeTitle(video.Title) + video.AudioExtension));
 
-        //    Console.WriteLine("A total of {0} videos have been parsed from the feed.  Adding video download object for each...", videos.Count);
+            // Register the progress events. We treat the download progress as 85% of the progress
+            // and the extraction progress only as 15% of the progress, because the download will
+            // take much longer than the audio extraction.
+            audioDownloader.DownloadProgressChanged += (sender, args) => DrawProgressBar(Convert.ToInt32(Math.Floor(args.ProgressPercentage * 0.85)), 100, 60, '#');
+            audioDownloader.AudioExtractionProgressChanged += (sender, args) => DrawProgressBar(Convert.ToInt32(Math.Floor(85 + args.ProgressPercentage * 0.15)), 100, 60, '#');
 
-        //    foreach (var video in videos)
-        //    {
-        //        var videoDownloader = new VideoDownloader(video, Path.Combine(options.OutputDir, GetSafeTitle(video.Title) + video.VideoExtension));
-        //        videoDownloader.DownloadProgressChanged += videoDownloader_DownloadProgressChanged;
+            audioToDownload.Add(audioDownloader);
 
-        //        videosToDownload.Add(videoDownloader);
-        //    }
+            //  If we have videos to download, download them
+            if (audioToDownload.Any())
+            {
+                Console.WriteLine("Downloading ...\n");
 
-        //    //  If we have videos to download, download them
-        //    if (videosToDownload.Any())
-        //    {
-        //        Console.WriteLine("Downloading ...\n");
-
-        //        //  Download each file we've queued up
-        //        foreach (var download in videosToDownload)
-        //        {
-        //            try
-        //            {
-        //                Console.WriteLine("'{0}'", download.Video.Title);
-        //                download.Execute();
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                Console.WriteLine("There was a problem downloading the file.  Continuing...", ex);
-        //                continue;
-        //            }
-        //        }
-        //    }
-        //}
+                //  Download each file we've queued up
+                foreach (var download in audioToDownload)
+                {
+                    try
+                    {
+                        Console.WriteLine("'{0}'", download.Video.Title);
+                        download.Execute();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("There was a problem downloading the file.  Continuing...", ex);
+                        continue;
+                    }
+                }
+            }
+        }
 
         private static void videoDownloader_DownloadProgressChanged(object sender, ProgressEventArgs e)
         {
@@ -203,5 +211,7 @@ namespace Flash_dl
             Console.Write(" {0}%", (perc * 100).ToString("N2"));
             Console.CursorLeft = left;
         }
+
+        #endregion
     }
 }
