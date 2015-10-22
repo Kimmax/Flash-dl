@@ -130,13 +130,13 @@ namespace Flash_dl
                 DownloadUrlResolver.DecryptDownloadUrl(video);
             }
 
-            var audioDownloader = new AudioDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), GetSafeTitle(video.Title) + video.VideoExtension));
+            var audioDownloader = new AudioDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), GetSafeTitle(video.Title) + video.AudioExtension));
 
             // Register the progress events. We treat the download progress as 85% of the progress
             // and the extraction progress only as 15% of the progress, because the download will
             // take much longer than the audio extraction.
-            audioDownloader.DownloadProgressChanged += audioDownloader_DownloadProgressChanged;
-            audioDownloader.AudioExtractionProgressChanged += audioDownloader_AudioExtractionProgressChanged;
+            audioDownloader.DownloadProgressChanged += (sender, args) => DrawProgressBar(Convert.ToInt32(Math.Floor(args.ProgressPercentage * 0.85)), 100, 60, '#');
+            audioDownloader.AudioExtractionProgressChanged += (sender, args) => DrawProgressBar(Convert.ToInt32(Math.Floor(85 + args.ProgressPercentage * 0.15)), 100, 60, '#');
 
             audioToDownload.Add(audioDownloader);
 
@@ -166,16 +166,6 @@ namespace Flash_dl
         {
             DrawProgressBar(Convert.ToInt32(Math.Floor(e.ProgressPercentage)), 100, 60, '#');
         }
-        private static void audioDownloader_DownloadProgressChanged(object sender, ProgressEventArgs e)
-        {
-            DrawProgressBar(Convert.ToInt32(Math.Floor(e.ProgressPercentage * 0.85)), 100, 60, '#');
-        }
-
-        private static void audioDownloader_AudioExtractionProgressChanged(object sender, ProgressEventArgs e)
-        {
-            DrawProgressBar(Convert.ToInt32(Math.Floor(85 + e.ProgressPercentage * 0.15)), 100, 60, '#');
-        }
-
 
         /// <summary>
         /// Gets a filesystem safe title
