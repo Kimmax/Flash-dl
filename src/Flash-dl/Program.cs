@@ -54,6 +54,10 @@ namespace Flash_dl
                             case "audio":
                                 DownloadAudio(videoInfos);
                                 return;
+                            case "pl":
+                            case "playlist":
+                                DownloadPlaylist(videoInfos);
+                                return;
                             default:
                                 Console.WriteLine("Invalid command.");
                                 goto case "help";
@@ -158,6 +162,48 @@ namespace Flash_dl
 
                 //  Download each file we've queued up
                 foreach (var download in audioToDownload)
+                {
+                    try
+                    {
+                        Console.WriteLine("'{0}'", download.Video.Title);
+                        download.Execute();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("There was a problem downloading the file.  Continuing...", ex);
+                        continue;
+                    }
+                }
+            }
+        }
+
+
+
+        //TODO: Download playlist not working needs panel beating
+        private static void DownloadPlaylist(IEnumerable<VideoInfo> videosInfo)
+        {
+            //Our list of videos to download:
+            List<VideoDownloader> videosToDownload = new List<VideoDownloader>();
+
+            List<VideoInfo> videos = VideoList.FromYouTubePlaylist("", 320);
+
+            Console.WriteLine("A total of {0} videos have been parsed from the feed.  Adding video download object for each...", videos.Count);
+
+            foreach (var video in videos)
+            {
+                var videoDownloader = new VideoDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), RemoveIllegalPathCharacters(video.Title) + video.VideoExtension));
+                videoDownloader.DownloadProgressChanged += videoDownloader_DownloadProgressChanged;
+
+                videosToDownload.Add(videoDownloader);
+            }
+
+            //  If we have videos to download, download them
+            if (videosToDownload.Any())
+            {
+                Console.WriteLine("Downloading ...\n");
+
+                //  Download each file we've queued up
+                foreach (var download in videosToDownload)
                 {
                     try
                     {
