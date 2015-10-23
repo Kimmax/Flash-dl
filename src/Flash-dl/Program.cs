@@ -32,10 +32,11 @@ namespace Flash_dl
                 {
                     IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url, false);
 
-                    if (url.Contains("-"))
+                    var i = url.IndexOf("-");
+
+                    if (i > 0)
                     {
-                        //TODO: there must be a better way to do this
-                        var customCommand = url.Remove(0, 45).ToLower();
+                        var customCommand = url.Substring(i + 1).ToLower();
                         // Handle all commands without arguments
                         switch (customCommand)
                         {
