@@ -36,31 +36,32 @@ namespace Flash_dl
                     {
                         var input = url.Split(new[] { ' ' }, 2);
                         var link = input[0];
-                        var customCommand = input[1].ToLower(); 
+                        var customCommand = input[1].Remove(0, 1).ToLower(); 
 
                         // Handle all commands without arguments
                         switch (customCommand)
                         {
-                            case "-?":
-                            case "-h":
-                            case "-help":
+                            case "?":
+                            case "h":
+                            case "help":
                                 Help();
                                 return;
-                            case "-v":
-                            case "-video":
+                            case "v":
+                            case "video":
                                 DownloadVideo(videoInfos);
                                 return;
-                            case "-a":
-                            case "-audio":
+                            case "a":
+                            case "audio":
                                 DownloadAudio(videoInfos);
                                 return;
                             default:
                                 Console.WriteLine("Invalid command.");
-                                goto case "-help";
+                                goto case "help";
                         }
                     }
                     else
                     {
+                        // If user does not use custom command
                         //TODO: Check if is a single video or playlist (check success = true) => Download
                     }
                 }
