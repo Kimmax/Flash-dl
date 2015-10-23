@@ -34,24 +34,35 @@ namespace Flash_dl
 
                     if (url.Contains("-"))
                     {
-                        //TODO: there must be a better way to do this
-                        var customCommand = url.Remove(0, 45).ToLower();
+                        var input = url.Split(new[] { ' ' }, 2);
+                        var link = input[0];
+                        var customCommand = input[1].Remove(0, 1).ToLower(); 
+
                         // Handle all commands without arguments
                         switch (customCommand)
                         {
+                            case "?":
+                            case "h":
                             case "help":
                                 Help();
                                 return;
                             case "v":
+                            case "video":
                                 DownloadVideo(videoInfos);
                                 return;
                             case "a":
+                            case "audio":
                                 DownloadAudio(videoInfos);
                                 return;
                             default:
                                 Console.WriteLine("Invalid command.");
                                 goto case "help";
                         }
+                    }
+                    else
+                    {
+                        // If user does not use custom command
+                        //TODO: Check if is a single video or playlist (check success = true) => Download
                     }
                 }
                 catch (Exception ex)
@@ -80,8 +91,8 @@ namespace Flash_dl
             //  Our list of videos to download:
             List<VideoDownloader> videosToDownload = new List<VideoDownloader>();
 
-            // Console.WriteLine("Single video url '{0}' was specified.  Processing...", options.VideoUrl);
             VideoInfo video = videoInfos.First(info => info.VideoType == VideoType.Mp4 && info.Resolution == 360);
+            //Console.WriteLine("Single video url '{0}' was specified.  Processing...", video.DownloadUrl);
 
             // If the video has a decrypted signature, decipher it
             if (video.RequiresDecryption)
@@ -89,7 +100,7 @@ namespace Flash_dl
                 DownloadUrlResolver.DecryptDownloadUrl(video);
             }
 
-            var videoDownloader = new VideoDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), GetSafeTitle(video.Title) + video.VideoExtension));
+            var videoDownloader = new VideoDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), RemoveIllegalPathCharacters(video.Title) + video.VideoExtension));
             videoDownloader.DownloadProgressChanged += videoDownloader_DownloadProgressChanged;
 
             videosToDownload.Add(videoDownloader);
@@ -130,7 +141,7 @@ namespace Flash_dl
                 DownloadUrlResolver.DecryptDownloadUrl(video);
             }
 
-            var audioDownloader = new AudioDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), GetSafeTitle(video.Title) + video.AudioExtension));
+            var audioDownloader = new AudioDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), RemoveIllegalPathCharacters(video.Title) + video.AudioExtension));
 
             // Register the progress events. We treat the download progress as 85% of the progress
             // and the extraction progress only as 15% of the progress, because the download will
@@ -168,18 +179,16 @@ namespace Flash_dl
         }
 
         /// <summary>
-        /// Gets a filesystem safe title
+        /// Gets a filesystem valid title
         /// </summary>
-        /// <param name="videoTitle"></param>
+        /// <param name="RemoveIllegalPathCharacters"></param>
         /// <returns></returns>
-        private static string GetSafeTitle(string videoTitle)
+        private static string RemoveIllegalPathCharacters(string path)
         {
-            string safeTitle = string.Empty;
-            safeTitle = Regex.Replace(videoTitle, @"[^a-zA-Z\d]", " ").Trim();
+            string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+            var r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
 
-            Console.WriteLine("Converting title '{0}' to safe filename '{1}'", videoTitle, safeTitle);
-
-            return safeTitle;
+            return r.Replace(path, "");
         }
 
         /// <summary>
