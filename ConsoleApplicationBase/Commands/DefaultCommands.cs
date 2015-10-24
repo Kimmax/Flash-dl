@@ -1,42 +1,76 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using YoutubeExtractor;
+using System.Threading;
 
-// All console commands must be in the sub-namespace Commands:
-namespace ConsoleApplicationBase.Commands
+namespace Flash_dl.Commands
 {
-    // Must be a public static class:
     public static class DefaultCommands
     {
-        // Methods used as console commands must be public and must return a string
-
-        public static string DoSomething(int id, string data)
+        // Method names are a mess currently, need to fix that on the command caller
+        public static string help() { return Help(); }
+        public static string Help()
         {
-            return string.Format(ConsoleFormatting.Indent(2) + 
-                "I did something to the record Id {0} and saved the data '{1}'", id, data);
+            return Backend.Help();
         }
 
-
-        public static string DoSomethingElse(DateTime date)
+        public static string exit() { return Exit(); }
+        public static string Exit()
         {
-            return string.Format(ConsoleFormatting.Indent(2) + "I did something else on {0}", date);
+            Console.WriteLine("Goodbye!");
+            Thread.Sleep(1000);
+            Environment.Exit(0);
+            return "";
         }
 
-
-        public static string DoSomethingOptional(int id, string data = "No Data Provided")
+        public static string Downloadvideo(string url) { return DownloadVideo(url); }
+        public static string downloadvideo(string url) { return DownloadVideo(url); }
+        public static string DownloadVideo(string url)
         {
-            var result = string.Format(ConsoleFormatting.Indent(2) + 
-                "I did something to the record Id {0} and saved the data {1}", id, data);
-
-            if(data == "No Data Provided")
+            IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url, false);
+            if(Backend.DownloadVideo(videoInfos))
             {
-                result = string.Format(ConsoleFormatting.Indent(2) + 
-                "I did something to the record Id {0} but the optinal parameter "
-                + "was not provided, so I saved the value '{1}'", id, data);
+                return "\nProcess finished\n";
             }
-            return result;
+            else
+            {
+                return "\nThere are no videos to download :(\n";
+            }
+        }
+
+        public static string Downloadaudio(string url) { return DownloadAudio(url); }
+        public static string downloadaudio(string url) { return DownloadAudio(url); }
+        public static string DownloadAudio(string url)
+        {
+            IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url, false);
+            if (Backend.DownloadAudio(videoInfos))
+            {
+                return "\nProcess finished\n";
+            }
+            else
+            {
+                return "\nThere are no videos to download :(\n";
+            }
+        }
+
+        public static string Downloadlaylist(string url) { return DownloadPlaylist(url); }
+        public static string downloadplaylist(string url) { return DownloadPlaylist(url); }
+        public static string DownloadPlaylist(string url)
+        {
+            IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url, false);
+            if (Backend.DownloadPlaylist(videoInfos))
+            {
+                return "\nProcess finished\n";
+            }
+            else
+            {
+                return "\nThere are no videos to download :(\n";
+            }
         }
     }
 }

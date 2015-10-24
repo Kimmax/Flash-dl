@@ -5,22 +5,21 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Reflection;
 
-namespace ConsoleApplicationBase
+namespace Flash_dl
 {
     class Program
     {
-        const string _commandNamespace = "ConsoleApplicationBase.Commands";
+        const string _commandNamespace = "Flash_dl.Commands";
         static Dictionary<string, Dictionary<string, IEnumerable<ParameterInfo>>> _commandLibraries;
 
         static void Main(string[] args)
         {
-            Console.Title = typeof(Program).Name;
+            Backend.UpdateTitle();
 
             // Any static classes containing commands for use from the 
             // console are located in the Commands namespace. Load 
             // references to each type in that namespace via reflection:
-            _commandLibraries = new Dictionary<string, Dictionary<string, 
-                    IEnumerable<ParameterInfo>>>();
+            _commandLibraries = new Dictionary<string, Dictionary<string, IEnumerable<ParameterInfo>>>();
 
             // Use reflection to load all of the classes in the Commands namespace:
             var q = from t in Assembly.GetExecutingAssembly().GetTypes()
@@ -43,7 +42,6 @@ namespace ConsoleApplicationBase
             }
             Run();
         }
-
 
         static void Run()
         {
@@ -77,10 +75,7 @@ namespace ConsoleApplicationBase
             // Validate the class name and command name:
             // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-            string badCommandMessage = string.Format(""
-                + "Unrecognized command \'{0}.{1}\'. "
-                + "Please type a valid command.",
-                command.LibraryClassName, command.Name);
+            string badCommandMessage = Backend.Help(true, command.Name);
 
             // Validate the command name:
             if (!_commandLibraries.ContainsKey(command.LibraryClassName))
@@ -372,7 +367,7 @@ namespace ConsoleApplicationBase
         }
 
 
-        const string _readPrompt = "console> ";
+        const string _readPrompt = "Flash-dl> ";
         public static string ReadFromConsole(string promptMessage = "")
         {
             // Show a prompt, and get input:

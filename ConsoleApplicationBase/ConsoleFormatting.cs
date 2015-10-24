@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 // code was found at the C# Examples Site: http://www.csharp-examples.net/indent-string-with-spaces/
 
-namespace ConsoleApplicationBase
+namespace Flash_dl
 {
     public class ConsoleFormatting
     {

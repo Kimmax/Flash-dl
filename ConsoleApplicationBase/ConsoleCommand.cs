@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
-using ConsoleApplicationBase.Commands;
+using Flash_dl.Commands;
 
-namespace ConsoleApplicationBase
+namespace Flash_dl
 {
     public class ConsoleCommand
     {
