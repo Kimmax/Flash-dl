@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using YoutubeExtractor;
 
 namespace Flash_dl
 {
-    class Program
+    public static class Backend
     {
         #region Private fields
 
@@ -19,78 +21,31 @@ namespace Flash_dl
 
         #endregion
 
-        static void Main(string[] args)
-        {
-            UpdateTitle();
-            bool menu = true;
-            while (menu)
-            {
-                Console.Write("flash-dl > ");
-                string url = Console.ReadLine();
-
-                try
-                {
-                    IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(url, false);
-
-                    if (url.Contains("-"))
-                    {
-                        var input = url.Split(new[] { ' ' }, 2);
-                        var link = input[0];
-                        var customCommand = input[1].Remove(0, 1).ToLower(); 
-
-                        // Handle all commands without arguments
-                        switch (customCommand)
-                        {
-                            case "?":
-                            case "h":
-                            case "help":
-                                Help();
-                                return;
-                            case "v":
-                            case "video":
-                                DownloadVideo(videoInfos);
-                                return;
-                            case "a":
-                            case "audio":
-                                DownloadAudio(videoInfos);
-                                return;
-                            case "pl":
-                            case "playlist":
-                                DownloadPlaylist(videoInfos);
-                                return;
-                            default:
-                                Console.WriteLine("Invalid command.");
-                                goto case "help";
-                        }
-                    }
-                    else
-                    {
-                        // If user does not use custom command
-                        //TODO: Check if is a single video or playlist (check success = true) => Download
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    Help();
-                }
-            }
-        }
-
-        #region Private helpers
-
-        private static void UpdateTitle()
+        #region Private Helpers
+        public static void UpdateTitle()
         {
             Console.Title = string.Format("{0} ({1})", applicationName, applicationVersionName);
         }
 
-        private static void Help()
+        public static string Help(bool fromBadCommand = false, string command = "")
         {
-            Console.WriteLine(string.Format("{0} {1}", applicationName, applicationVersionVerboseName));
-            Console.WriteLine("Youtube: - [url] -[v]ideo|-[a]udio");
+            string output = "";
+
+            if(fromBadCommand)
+            {
+                if(!string.IsNullOrEmpty(command))
+                    output += string.Format("Command \"{0}\" not found.\nPrinting help.\n", command);
+            }
+
+            output += string.Format("\n{0} {1}", applicationName, applicationVersionVerboseName) + "\n\n";
+            output += "DownloadVdeo http://youtube.com/watch?v=abcdefg - Downloads the video from the URL to your Video folder.\n";
+            output += "DownloadAudio http://youtube.com/watch?v=abcdefg - Downloads the video from the URL, coverts it to audio and saves it.\n";
+            output += "DownloadPlaylist https://www.youtube.com/watch?list=abcdefg - Downloads a whole playlist from youtube.\n";
+            output += "Exit - Closes the application. Goodbye!";
+            return output;
         }
 
-        private static void DownloadVideo(IEnumerable<VideoInfo> videoInfos)
+        public static bool DownloadVideo(IEnumerable<VideoInfo> videoInfos)
         {
             //  Our list of videos to download:
             List<VideoDownloader> videosToDownload = new List<VideoDownloader>();
@@ -128,10 +83,16 @@ namespace Flash_dl
                         continue;
                     }
                 }
+
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 
-        private static void DownloadAudio(IEnumerable<VideoInfo> videoInfos)
+        public static bool DownloadAudio(IEnumerable<VideoInfo> videoInfos)
         {
             //  Our list of videos to download:
             List<AudioDownloader> audioToDownload = new List<AudioDownloader>();
@@ -174,13 +135,17 @@ namespace Flash_dl
                         continue;
                     }
                 }
+                
+                return true;
+            }
+            else
+            {
+                return false;
             }
         }
 
-
-
         //TODO: Download playlist not working needs panel beating
-        private static void DownloadPlaylist(IEnumerable<VideoInfo> videosInfo)
+        public static bool DownloadPlaylist(IEnumerable<VideoInfo> videosInfo)
         {
             //Our list of videos to download:
             List<VideoDownloader> videosToDownload = new List<VideoDownloader>();
@@ -216,6 +181,12 @@ namespace Flash_dl
                         continue;
                     }
                 }
+
+               return true;
+            }
+            else
+            {
+                return false;
             }
         }
 
