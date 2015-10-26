@@ -14,6 +14,13 @@ namespace Flash_dl.Commands
             return Backend.Help();
         }
 
+        public static string clear() { return Clear(); }
+        public static string Clear()
+        {
+            Console.Clear();
+            return "";
+        }
+
         public static string exit() { return Exit(); }
         public static string Exit()
         {
