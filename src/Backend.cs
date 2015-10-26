@@ -36,7 +36,7 @@ namespace Flash_dl
             }
 
             output += string.Format("\n{0} {1}", applicationName, applicationVersionVerboseName) + "\n\n";
-            output += "DownloadVdeo http://youtube.com/watch?v=abcdefg - Downloads the video from the URL to your Video folder.\n";
+            output += "DownloadVideo http://youtube.com/watch?v=abcdefg - Downloads the video from the URL to your Video folder.\n";
             output += "DownloadAudio http://youtube.com/watch?v=abcdefg - Downloads the video from the URL, coverts it to audio and saves it.\n";
             output += "DownloadPlaylist https://www.youtube.com/watch?list=abcdefg - Downloads a whole playlist from youtube.\n";
             output += "Exit - Closes the application. Goodbye!";
