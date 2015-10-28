@@ -20,7 +20,7 @@ namespace Flash_dl
 
         // THIS WILL BE REPLACED BY OWN APi PROXY IN THE FUTURE
         // DO NOT use for production and REMOVE before pushing to public
-        private static string APIKey = "";
+        private static string APIKey = "AIzaSyDoAi4rP-PGw76Rl5m6hS3cwyyX_vaunfU";
         public static SYMMHandler symmBackend = new SYMMHandler(APIKey);
 
         // Videolist used to store all videos that are about to get downloaded
@@ -52,7 +52,7 @@ namespace Flash_dl
             return output;
         }
 
-        public static void LoadByURL(string url)
+        public static void LoadByURL(string url, bool extractAudio)
         {
             symmBackend.OnVideoInformationLoaded += (s, e) =>
             {
@@ -62,17 +62,11 @@ namespace Flash_dl
             Console.WriteLine("Loading data..");
             Backend.symmBackend.LoadVideosFromURL(url);
             Console.WriteLine("Loaded. Downloading, please wait..");
-            Backend.StartDownload(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "downloaded"));
+            Backend.StartDownload(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "downloaded"), extractAudio);
         }
 
-        public static void StartDownload(string destination, bool extractAudio = false)
+        private static void StartDownload(string destination, bool extractAudio)
         {
-            // Defines how many videos are allowed to download at the same time
-            int maxSynDownloadingVideo = 4;
-
-            // Holds current number of downloading videos. Used to control maximum syncron downloads
-            int workingVideos = 0;
-
             // Check if folder exist, create it if not
             if (!Directory.Exists(destination))
                 Directory.CreateDirectory(destination);
@@ -84,49 +78,47 @@ namespace Flash_dl
             symmBackend.OnVideoDownloadProgressChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) /4, 100, 60, '#');
+                if (extractAudio)
+                {
+                    DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4, 100, 60, '#');
+                }
+                else
+                {
+                    DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
+                }
             };
 
             // Register changed audio extraction progress of one video. Audio process counts as 25% work
             symmBackend.OnVideoAudioExtractionProgressChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) /4 +75, 100, 60, '#');
+                if (extractAudio)
+                {
+                    DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4 + 75, 100, 60, '#');
+                }
+                else
+                {
+                    DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
+                }
+                
             };
 
             // Register finished download of one video
             symmBackend.OnVideoDownloadComplete += (dsender, deventargs) =>
             {
-                // One video download is done, signal download thread to go for the next one
-                resetEvent.Set();
-                resetEvent.Reset();
-
-                // One video is done. Note that
-                workingVideos--;
-                Console.WriteLine(String.Format("Video finsihed: \"{0}\"", deventargs.Video.VideoTitle));
-                rawVideoList.Remove(deventargs.Video);
+                Console.WriteLine(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
             };
 
             // Register when a video failed to download
             symmBackend.OnVideoDownloadFailed += (dsender, deventargs) =>
             {
-                // One video download failed, signal download thread to go for the next one
-                resetEvent.Set();
-                resetEvent.Reset();
-
-                // Even a fail frees up working space
-                workingVideos--;
                 Console.WriteLine(String.Format("Video failed to download: \"{0}\"", deventargs.Video.VideoTitle));
             };
 
             // We want to download every video in this list
             foreach (YouTubeVideo video in rawVideoList)
             {
-                // If all download slots are full, let the loop wait for them to get free
-                if (workingVideos >= maxSynDownloadingVideo)
-                    resetEvent.WaitOne();
-
-                Console.WriteLine(String.Format("Starting to download: \"{0}\"", video.VideoTitle));
+                Console.WriteLine(String.Format("\"{0}\"", video.VideoTitle));
 
                 // Prepare backend
                 string audioDestination = symmBackend.BuildSavePath(destination, video);
@@ -141,25 +133,10 @@ namespace Flash_dl
                 }
 
                 // Tell backend to download the video spceifed to destination spceifed in the variable
-                symmBackend.DownloadVideo(video, audioDestination);
-
-                // We are using one download slot. Not that.
-                workingVideos++;
+                symmBackend.DownloadVideo(video, audioDestination, extractAudio);
             }
-        }
 
-
-        /// <summary>
-        /// Gets a filesystem valid title
-        /// </summary>
-        /// <param name="RemoveIllegalPathCharacters"></param>
-        /// <returns></returns>
-        private static string RemoveIllegalPathCharacters(string path)
-        {
-            string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
-            var r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
-
-            return r.Replace(path, "");
+            rawVideoList.Clear();
         }
 
         /// <summary>

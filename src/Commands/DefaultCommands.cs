@@ -34,17 +34,20 @@ namespace Flash_dl.Commands
         public static string downloadvideo(string url) { return DownloadVideo(url); }
         public static string DownloadVideo(string url)
         {
-            return "Not implementented"; 
+            Backend.LoadByURL(url, false);
+
+            // No direct output. Command feedback comes from backend.
+            return "";
         }
 
         public static string Downloadaudio(string url) { return DownloadAudio(url); }
         public static string downloadaudio(string url) { return DownloadAudio(url); }
         public static string DownloadAudio(string url)
         {
-            Backend.LoadByURL(url);
+            Backend.LoadByURL(url, true);
             
             // No direct output. Command feedback comes from backend.
-            return "\n";
+            return "";
         }
 
         public static string Downloadlaylist(string url) { return DownloadPlaylist(url); }
