@@ -4,7 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using YoutubeExtractor;
+using SYMM_Backend;
+using System.Threading;
 
 namespace Flash_dl
 {
@@ -17,9 +18,17 @@ namespace Flash_dl
         private static readonly string applicationVersionName = string.Format("v{0}.{1}", applicationVersion.Major, applicationVersion.Minor, applicationVersion.Build, applicationVersion.Revision);
         private static readonly string applicationVersionVerboseName = string.Format("v{0}.{1} Patch {2} Build {3}", applicationVersion.Major, applicationVersion.Minor, applicationVersion.Build, applicationVersion.Revision);
 
+        // THIS WILL BE REPLACED BY OWN APi PROXY IN THE FUTURE
+        // DO NOT use for production and REMOVE before pushing to public
+        private static string APIKey = "";
+        public static SYMMHandler symmBackend = new SYMMHandler(APIKey);
+
+        // Videolist used to store all videos that are about to get downloaded
+        private static List<YouTubeVideo> rawVideoList = new List<YouTubeVideo>();
+
         #endregion
 
-        #region Private Helpers
+        #region Private Methods
         public static void UpdateTitle()
         {
             Console.Title = string.Format("{0} ({1})", applicationName, applicationVersionName);
@@ -43,155 +52,102 @@ namespace Flash_dl
             return output;
         }
 
-        public static bool DownloadVideo(IEnumerable<VideoInfo> videoInfos)
+        public static void LoadByURL(string url)
         {
-            //  Our list of videos to download:
-            List<VideoDownloader> videosToDownload = new List<VideoDownloader>();
-
-            VideoInfo video = videoInfos.First(info => info.VideoType == VideoType.Mp4 && info.Resolution == 360);
-            //Console.WriteLine("Single video url '{0}' was specified.  Processing...", video.DownloadUrl);
-
-            // If the video has a decrypted signature, decipher it
-            if (video.RequiresDecryption)
+            symmBackend.OnVideoInformationLoaded += (s, e) =>
             {
-                DownloadUrlResolver.DecryptDownloadUrl(video);
-            }
+                rawVideoList.Add(e.Video);
+            };
 
-            var videoDownloader = new VideoDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), RemoveIllegalPathCharacters(video.Title) + video.VideoExtension));
-            videoDownloader.DownloadProgressChanged += videoDownloader_DownloadProgressChanged;
+            Console.WriteLine("Loading data..");
+            Backend.symmBackend.LoadVideosFromURL(url);
+            Console.WriteLine("Loaded. Downloading, please wait..");
+            Backend.StartDownload(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "downloaded"));
+        }
 
-            videosToDownload.Add(videoDownloader);
+        public static void StartDownload(string destination, bool extractAudio = false)
+        {
+            // Defines how many videos are allowed to download at the same time
+            int maxSynDownloadingVideo = 4;
 
-            //  If we have videos to download, download them
-            if (videosToDownload.Any())
+            // Holds current number of downloading videos. Used to control maximum syncron downloads
+            int workingVideos = 0;
+
+            // Check if folder exist, create it if not
+            if (!Directory.Exists(destination))
+                Directory.CreateDirectory(destination);
+
+            // Reset event controlling max Downloads. If workingVideos >= maxSynDownloadVideo the thread waits for this event to set
+            ManualResetEvent resetEvent = new ManualResetEvent(false);
+
+            // Register changed download progress of one video Audio process counts as 75% work
+            symmBackend.OnVideoDownloadProgressChanged += (dsender, deventargs) =>
             {
-                Console.WriteLine("Downloading ...\n");
+                // Show progress on GUI
+                DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) /4, 100, 60, '#');
+            };
 
-                //  Download each file we've queued up
-                foreach (var download in videosToDownload)
+            // Register changed audio extraction progress of one video. Audio process counts as 25% work
+            symmBackend.OnVideoAudioExtractionProgressChanged += (dsender, deventargs) =>
+            {
+                // Show progress on GUI
+                DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) /4 +75, 100, 60, '#');
+            };
+
+            // Register finished download of one video
+            symmBackend.OnVideoDownloadComplete += (dsender, deventargs) =>
+            {
+                // One video download is done, signal download thread to go for the next one
+                resetEvent.Set();
+                resetEvent.Reset();
+
+                // One video is done. Note that
+                workingVideos--;
+                Console.WriteLine(String.Format("Video finsihed: \"{0}\"", deventargs.Video.VideoTitle));
+                rawVideoList.Remove(deventargs.Video);
+            };
+
+            // Register when a video failed to download
+            symmBackend.OnVideoDownloadFailed += (dsender, deventargs) =>
+            {
+                // One video download failed, signal download thread to go for the next one
+                resetEvent.Set();
+                resetEvent.Reset();
+
+                // Even a fail frees up working space
+                workingVideos--;
+                Console.WriteLine(String.Format("Video failed to download: \"{0}\"", deventargs.Video.VideoTitle));
+            };
+
+            // We want to download every video in this list
+            foreach (YouTubeVideo video in rawVideoList)
+            {
+                // If all download slots are full, let the loop wait for them to get free
+                if (workingVideos >= maxSynDownloadingVideo)
+                    resetEvent.WaitOne();
+
+                Console.WriteLine(String.Format("Starting to download: \"{0}\"", video.VideoTitle));
+
+                // Prepare backend
+                string audioDestination = symmBackend.BuildSavePath(destination, video);
+
+                // Looks like we downloaded that already. Skip.
+                if (symmBackend.SongExists(audioDestination))
                 {
-                    try
-                    {
-                        Console.WriteLine("'{0}'", download.Video.Title);
-                        download.Execute();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("There was a problem downloading the file.  Continuing...", ex);
-                        continue;
-                    }
+                    Console.WriteLine(String.Format("Already downloaded: \"{0}\"", video.VideoTitle));
+
+                    // Skip the rest
+                    continue;
                 }
 
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
+                // Tell backend to download the video spceifed to destination spceifed in the variable
+                symmBackend.DownloadVideo(video, audioDestination);
 
-        public static bool DownloadAudio(IEnumerable<VideoInfo> videoInfos)
-        {
-            //  Our list of videos to download:
-            List<AudioDownloader> audioToDownload = new List<AudioDownloader>();
-
-            // Console.WriteLine("Single video url '{0}' was specified.  Processing...", options.VideoUrl);
-            VideoInfo video = videoInfos.Where(info => info.CanExtractAudio).OrderByDescending(info => info.AudioBitrate).First();
-
-            // If the video has a decrypted signature, decipher it
-            if (video.RequiresDecryption)
-            {
-                DownloadUrlResolver.DecryptDownloadUrl(video);
-            }
-
-            var audioDownloader = new AudioDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), RemoveIllegalPathCharacters(video.Title) + video.AudioExtension));
-
-            // Register the progress events. We treat the download progress as 85% of the progress
-            // and the extraction progress only as 15% of the progress, because the download will
-            // take much longer than the audio extraction.
-            audioDownloader.DownloadProgressChanged += (sender, args) => DrawProgressBar(Convert.ToInt32(Math.Floor(args.ProgressPercentage * 0.85)), 100, 60, '#');
-            audioDownloader.AudioExtractionProgressChanged += (sender, args) => DrawProgressBar(Convert.ToInt32(Math.Floor(85 + args.ProgressPercentage * 0.15)), 100, 60, '#');
-
-            audioToDownload.Add(audioDownloader);
-
-            //  If we have videos to download, download them
-            if (audioToDownload.Any())
-            {
-                Console.WriteLine("Downloading ...\n");
-
-                //  Download each file we've queued up
-                foreach (var download in audioToDownload)
-                {
-                    try
-                    {
-                        Console.WriteLine("'{0}'", download.Video.Title);
-                        download.Execute();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("There was a problem downloading the file.  Continuing...", ex);
-                        continue;
-                    }
-                }
-                
-                return true;
-            }
-            else
-            {
-                return false;
+                // We are using one download slot. Not that.
+                workingVideos++;
             }
         }
 
-        //TODO: Download playlist not working needs panel beating
-        public static bool DownloadPlaylist(IEnumerable<VideoInfo> videosInfo)
-        {
-            //Our list of videos to download:
-            List<VideoDownloader> videosToDownload = new List<VideoDownloader>();
-
-            List<VideoInfo> videos = VideoList.FromYouTubePlaylist("", 320);
-
-            Console.WriteLine("A total of {0} videos have been parsed from the feed.  Adding video download object for each...", videos.Count);
-
-            foreach (var video in videos)
-            {
-                var videoDownloader = new VideoDownloader(video, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), RemoveIllegalPathCharacters(video.Title) + video.VideoExtension));
-                videoDownloader.DownloadProgressChanged += videoDownloader_DownloadProgressChanged;
-
-                videosToDownload.Add(videoDownloader);
-            }
-
-            //  If we have videos to download, download them
-            if (videosToDownload.Any())
-            {
-                Console.WriteLine("Downloading ...\n");
-
-                //  Download each file we've queued up
-                foreach (var download in videosToDownload)
-                {
-                    try
-                    {
-                        Console.WriteLine("'{0}'", download.Video.Title);
-                        download.Execute();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("There was a problem downloading the file.  Continuing...", ex);
-                        continue;
-                    }
-                }
-
-               return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private static void videoDownloader_DownloadProgressChanged(object sender, ProgressEventArgs e)
-        {
-            DrawProgressBar(Convert.ToInt32(Math.Floor(e.ProgressPercentage)), 100, 60, '#');
-        }
 
         /// <summary>
         /// Gets a filesystem valid title
