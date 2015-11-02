@@ -34,7 +34,8 @@ namespace Flash_dl.Commands
         public static string downloadvideo(string url) { return DownloadVideo(url); }
         public static string DownloadVideo(string url)
         {
-            Backend.LoadByURL(url, false);
+            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "downloaded"));
+            Backend.LoadByURL(settings);
 
             // No direct output. Command feedback comes from backend.
             return "";
@@ -44,7 +45,8 @@ namespace Flash_dl.Commands
         public static string downloadaudio(string url) { return DownloadAudio(url); }
         public static string DownloadAudio(string url)
         {
-            Backend.LoadByURL(url, true);
+            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "downloaded"), true);
+            Backend.LoadByURL(settings);
             
             // No direct output. Command feedback comes from backend.
             return "";

@@ -29,6 +29,7 @@ namespace Flash_dl
         #endregion
 
         #region Private Methods
+
         public static void UpdateTitle()
         {
             Console.Title = string.Format("{0} ({1})", applicationName, applicationVersionName);
@@ -52,7 +53,7 @@ namespace Flash_dl
             return output;
         }
 
-        public static void LoadByURL(string url, bool extractAudio)
+        public static void LoadByURL(SYMMSettings settings)
         {
             symmBackend.OnVideoInformationLoaded += (s, e) =>
             {
@@ -60,16 +61,20 @@ namespace Flash_dl
             };
 
             Console.WriteLine("Loading data..");
-            Backend.symmBackend.LoadVideosFromURL(url);
+            Backend.symmBackend.LoadVideosFromURL(settings.DownloadURL);
             Console.WriteLine("Loaded. Downloading, please wait..");
-            Backend.StartDownload(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "downloaded"), extractAudio);
+            Backend.StartDownload(settings);
+
+            // Clean up after work is done
+            rawVideoList = new List<YouTubeVideo>();
+            symmBackend.ResetEvents();
         }
 
-        private static void StartDownload(string destination, bool extractAudio)
+        private static void StartDownload(SYMMSettings settings)
         {
             // Check if folder exist, create it if not
-            if (!Directory.Exists(destination))
-                Directory.CreateDirectory(destination);
+            if (!Directory.Exists(settings.SavePath))
+                Directory.CreateDirectory(settings.SavePath);
 
             // Reset event controlling max Downloads. If workingVideos >= maxSynDownloadVideo the thread waits for this event to set
             ManualResetEvent resetEvent = new ManualResetEvent(false);
@@ -78,7 +83,7 @@ namespace Flash_dl
             symmBackend.OnVideoDownloadProgressChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                if (extractAudio)
+                if (settings.ExtractAudio)
                 {
                     DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4, 100, 60, '#');
                 }
@@ -92,7 +97,7 @@ namespace Flash_dl
             symmBackend.OnVideoAudioExtractionProgressChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                if (extractAudio)
+                if (settings.ExtractAudio)
                 {
                     DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4 + 75, 100, 60, '#');
                 }
@@ -121,22 +126,20 @@ namespace Flash_dl
                 Console.WriteLine(String.Format("\"{0}\"", video.VideoTitle));
 
                 // Prepare backend
-                string audioDestination = symmBackend.BuildSavePath(destination, video);
+                settings.PathSafefileName = symmBackend.BuildPathSafeName(video.VideoTitle);
 
                 // Looks like we downloaded that already. Skip.
-                if (symmBackend.SongExists(audioDestination))
+                if (Directory.GetFiles(settings.SavePath, settings.PathSafefileName + ".*").Length > 0)
                 {
-                    Console.WriteLine(String.Format("Already downloaded: \"{0}\"", video.VideoTitle));
+                    Console.WriteLine(String.Format("Looks like we already downloaded \"{0}\".\nPass 'noduplicatecheck' as parameter to ignore this.", video.VideoTitle));
 
                     // Skip the rest
                     continue;
                 }
 
                 // Tell backend to download the video spceifed to destination spceifed in the variable
-                symmBackend.DownloadVideo(video, audioDestination, extractAudio);
+                symmBackend.DownloadVideo(video, settings);
             }
-
-            rawVideoList.Clear();
         }
 
         /// <summary>
