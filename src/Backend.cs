@@ -20,7 +20,7 @@ namespace Flash_dl
 
         // THIS WILL BE REPLACED BY OWN APi PROXY IN THE FUTURE
         // DO NOT use for production and REMOVE before pushing to public
-        private static string APIKey = "AIzaSyDoAi4rP-PGw76Rl5m6hS3cwyyX_vaunfU";
+        private static string APIKey = "";
         public static SYMMHandler symmBackend = new SYMMHandler(APIKey);
 
         // Videolist used to store all videos that are about to get downloaded
