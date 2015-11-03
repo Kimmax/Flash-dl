@@ -30,7 +30,7 @@ namespace Flash_dl.Commands
 
         public static string DownloadVideo(string url)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "downloaded"));
+            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, Properties.Settings.Default.DefaultVideoResolution, Properties.Settings.Default.DuplicateChecking);
             Backend.LoadByURL(settings);
 
             // No direct output. Command feedback comes from backend.
@@ -39,7 +39,7 @@ namespace Flash_dl.Commands
 
         public static string DownloadAudio(string url)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "downloaded"), true);
+            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, true, Properties.Settings.Default.DuplicateChecking, (SYMM_Backend.SYMMFileFormats.AudioFormats)Enum.Parse(typeof(SYMM_Backend.SYMMFileFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
             Backend.LoadByURL(settings);
             
             // No direct output. Command feedback comes from backend.

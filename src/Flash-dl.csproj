@@ -70,6 +70,7 @@
   <ItemGroup>
     <Compile Include="Backend.cs" />
     <Compile Include="Commands\DefaultCommands.cs" />
+    <Compile Include="Commands\Settings.cs" />
     <Compile Include="ConsoleCommand.cs" />
     <Compile Include="ConsoleFormatting.cs" />
     <Compile Include="Program.cs" />

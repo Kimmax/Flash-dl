@@ -34,5 +34,77 @@ namespace Flash_dl.Properties {
                 this["youtubeApiKey"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SavePath {
+            get {
+                return ((string)(this["SavePath"]));
+            }
+            set {
+                this["SavePath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool DuplicateChecking {
+            get {
+                return ((bool)(this["DuplicateChecking"]));
+            }
+            set {
+                this["DuplicateChecking"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("mp3")]
+        public string DefaultAudioFormat {
+            get {
+                return ((string)(this["DefaultAudioFormat"]));
+            }
+            set {
+                this["DefaultAudioFormat"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1080")]
+        public short DefaultVideoResolution {
+            get {
+                return ((short)(this["DefaultVideoResolution"]));
+            }
+            set {
+                this["DefaultVideoResolution"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("192")]
+        public short DefaultAudioBitrate {
+            get {
+                return ((short)(this["DefaultAudioBitrate"]));
+            }
+            set {
+                this["DefaultAudioBitrate"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool SettingsNeedReset {
+            get {
+                return ((bool)(this["SettingsNeedReset"]));
+            }
+            set {
+                this["SettingsNeedReset"] = value;
+            }
+        }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using SYMM_Backend;
 
 namespace Flash_dl
 {
@@ -13,6 +14,8 @@ namespace Flash_dl
         static void Main(string[] args)
         {
             Backend.UpdateTitle();
+            if (Properties.Settings.Default.SettingsNeedReset)
+                Commands.Settings.Reset(true);
 
             // Any static classes containing commands for use from the 
             // console are located in the Commands namespace. Load 
