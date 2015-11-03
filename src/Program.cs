@@ -17,7 +17,7 @@ namespace Flash_dl
             // Any static classes containing commands for use from the 
             // console are located in the Commands namespace. Load 
             // references to each type in that namespace via reflection:
-            _commandLibraries = new Dictionary<string, Dictionary<string, IEnumerable<ParameterInfo>>>();
+            _commandLibraries = new Dictionary<string, Dictionary<string, IEnumerable<ParameterInfo>>>(StringComparer.OrdinalIgnoreCase);
 
             // Use reflection to load all of the classes in the Commands namespace:
             var q = from t in Assembly.GetExecutingAssembly().GetTypes()
@@ -29,7 +29,7 @@ namespace Flash_dl
             {
                 // Load the method info from each class into a dictionary:
                 var methods = commandClass.GetMethods(BindingFlags.Static | BindingFlags.Public);
-                var methodDictionary = new Dictionary<string, IEnumerable<ParameterInfo>>();
+                var methodDictionary = new Dictionary<string, IEnumerable<ParameterInfo>>(StringComparer.OrdinalIgnoreCase);
                 foreach (var method in methods)
                 {
                     string commandName = method.Name;
@@ -175,7 +175,7 @@ namespace Flash_dl
             {
                 var result = typeInfo.InvokeMember(
                     command.Name,
-                    BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public,
+                    BindingFlags.IgnoreCase | BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public,
                     null, null, inputArgs);
                 return result.ToString();
             }
