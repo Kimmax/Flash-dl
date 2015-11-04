@@ -18,8 +18,6 @@ namespace Flash_dl
         private static readonly string applicationVersionName = string.Format("v{0}.{1}", applicationVersion.Major, applicationVersion.Minor, applicationVersion.Build, applicationVersion.Revision);
         private static readonly string applicationVersionVerboseName = string.Format("v{0}.{1} Patch {2} Build {3}", applicationVersion.Major, applicationVersion.Minor, applicationVersion.Build, applicationVersion.Revision);
 
-        // THIS WILL BE REPLACED BY OWN APi PROXY IN THE FUTURE
-        // DO NOT use for production and REMOVE before pushing to public
         private static string APIKey = Properties.Settings.Default.youtubeApiKey;
         public static SYMMHandler symmBackend = new SYMMHandler(APIKey);
 
@@ -45,10 +43,11 @@ namespace Flash_dl
                     output += string.Format("Command \"{0}\" not found.\nPrinting help.\n", command);
             }
 
-            output += string.Format("\n{0} {1}", applicationName, applicationVersionVerboseName) + "\n\n";
+            output += string.Format("{0} {1}", applicationName, applicationVersionVerboseName) + "\n\n";
             output += "DownloadVideo http://youtube.com/watch?v=abcdefg - Downloads the video from the URL to your Video folder.\n";
             output += "DownloadAudio http://youtube.com/watch?v=abcdefg - Downloads the video from the URL, coverts it to audio and saves it.\n";
             output += "DownloadPlaylist https://www.youtube.com/watch?list=abcdefg - Downloads a whole playlist from youtube.\n";
+            output += "Settings can be set by entering 'settings.[setting] [value]' - For more info type in 'settings.help'\n";
             output += "Exit - Closes the application. Goodbye!";
             return output;
         }
