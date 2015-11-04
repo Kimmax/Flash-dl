@@ -11,6 +11,13 @@ namespace Flash_dl
         const string _commandNamespace = "Flash_dl.Commands";
         static Dictionary<string, Dictionary<string, IEnumerable<ParameterInfo>>> _commandLibraries;
 
+        const string _readPrompt = "\nFlash-dl> ";
+        private const ConsoleColor _readPromtColor = ConsoleColor.DarkGreen;
+        private const ConsoleColor _readCommandColor = ConsoleColor.White;
+        private const ConsoleColor _promtCommandInvalidParameterColor = ConsoleColor.DarkYellow;
+        private const ConsoleColor _promtCommandOutputColor = ConsoleColor.Gray;
+        private const ConsoleColor _promtCommandOutputErrorColor = ConsoleColor.Red;
+
         static void Main(string[] args)
         {
             Backend.UpdateTitle();
@@ -65,6 +72,7 @@ namespace Flash_dl
                 catch (Exception ex)
                 {
                     // OOPS! Something went wrong - Write out the problem:
+                    Console.ForegroundColor = _promtCommandOutputErrorColor;
                     WriteToConsole(ex.Message);
                 }
             }
@@ -76,16 +84,18 @@ namespace Flash_dl
             // Validate the class name and command name:
             // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-            string badCommandMessage = Backend.Help(true, command.Name);
+            string badCommandMessage = command.Name + " not found. Enter 'help' for more information.";
 
             // Validate the command name:
             if (!_commandLibraries.ContainsKey(command.LibraryClassName))
             {
+                Console.ForegroundColor = _promtCommandOutputErrorColor;
                 return badCommandMessage;
             }
             var methodDictionary = _commandLibraries[command.LibraryClassName];
             if (!methodDictionary.ContainsKey(command.Name))
             {
+                Console.ForegroundColor = _promtCommandOutputErrorColor;
                 return badCommandMessage;
             }
 
@@ -104,6 +114,7 @@ namespace Flash_dl
 
             if (requiredCount > providedCount)
             {
+                Console.ForegroundColor = _promtCommandInvalidParameterColor;
                 return string.Format(
                     "Missing required argument. {0} required, {1} optional, {2} provided",
                     requiredCount, optionalCount, providedCount);
@@ -143,7 +154,7 @@ namespace Flash_dl
                         methodParameterValueList.RemoveAt(i);
                         methodParameterValueList.Insert(i, value);
                     }
-                    catch (ArgumentException ex)
+                    catch (ArgumentException)
                     {
                         string argumentName = methodParam.Name;
                         string argumentTypeName = typeRequired.Name;
@@ -180,6 +191,7 @@ namespace Flash_dl
                     command.Name,
                     BindingFlags.IgnoreCase | BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public,
                     null, null, inputArgs);
+                Console.ForegroundColor = _promtCommandOutputColor;
                 return result.ToString();
             }
             catch (TargetInvocationException ex)
@@ -367,12 +379,14 @@ namespace Flash_dl
             }
         }
 
-
-        const string _readPrompt = "Flash-dl> ";
         public static string ReadFromConsole(string promptMessage = "")
         {
             // Show a prompt, and get input:
-            Console.Write(_readPrompt + promptMessage);
+            Console.ForegroundColor = _readPromtColor;
+            Console.Write(_readPrompt);
+            Console.ForegroundColor = _readCommandColor;
+            Console.Write(promptMessage);
+
             return Console.ReadLine();
         }
     }

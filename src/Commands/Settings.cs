@@ -108,7 +108,7 @@ namespace Flash_dl.Commands
             output += String.Format("Duplicate checking: {0}\n", Properties.Settings.Default.DuplicateChecking ? "enabled" : "disabled");
             output += String.Format("Default aduio format: {0}\n", Properties.Settings.Default.DefaultAudioFormat);
             output += String.Format("Default audio bitrate: {0}kbit/s\n", Properties.Settings.Default.DefaultAudioBitrate);
-            output += String.Format("Default video resolution: {0}p\n", Properties.Settings.Default.DefaultVideoResolution);
+            output += String.Format("Default video resolution: {0}p", Properties.Settings.Default.DefaultVideoResolution);
             return output;
         }
 
@@ -127,7 +127,7 @@ namespace Flash_dl.Commands
 
             output += String.Format("Settings.DefaultAudioFormat " + formatList + " - Sets the default audio format\n");
             output += String.Format("Settings.DefaultVideoResolution 144|240|360|480|720|1080|1440|2160 - Sets the default video bitrate\n");
-            output += String.Format("Settings.DefaultAudioBitrate 64|128|192|256|320 - Sets the default audio bitrate\n");
+            output += String.Format("Settings.DefaultAudioBitrate 64|128|192|256|320 - Sets the default audio bitrate");
             return output;
         }
 
