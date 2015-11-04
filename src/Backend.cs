@@ -18,8 +18,7 @@ namespace Flash_dl
         private static readonly string applicationVersionName = string.Format("v{0}.{1}", applicationVersion.Major, applicationVersion.Minor, applicationVersion.Build, applicationVersion.Revision);
         private static readonly string applicationVersionVerboseName = string.Format("v{0}.{1} Patch {2} Build {3}", applicationVersion.Major, applicationVersion.Minor, applicationVersion.Build, applicationVersion.Revision);
 
-        private static string APIKey = Properties.Settings.Default.youtubeApiKey;
-        public static SYMMHandler symmBackend = new SYMMHandler(APIKey);
+        public static SYMMHandler symmBackend;
 
         // Videolist used to store all videos that are about to get downloaded
         private static List<YouTubeVideo> rawVideoList = new List<YouTubeVideo>();
@@ -43,7 +42,7 @@ namespace Flash_dl
                     output += string.Format("Command \"{0}\" not found.\nPrinting help.\n", command);
             }
 
-            output += string.Format("{0} {1}", applicationName, applicationVersionVerboseName) + "\n\n";
+            output += GetHeader() + "\n";
             output += "DownloadVideo http://youtube.com/watch?v=abcdefg - Downloads the video from the URL to your Video folder.\n";
             output += "DownloadAudio http://youtube.com/watch?v=abcdefg - Downloads the video from the URL, coverts it to audio and saves it.\n";
             output += "DownloadPlaylist https://www.youtube.com/watch?list=abcdefg - Downloads a whole playlist from youtube.\n";
@@ -54,6 +53,8 @@ namespace Flash_dl
 
         public static void LoadByURL(SYMMSettings settings)
         {
+            symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
+
             symmBackend.OnVideoInformationLoaded += (s, e) =>
             {
                 rawVideoList.Add(e.Video);
@@ -139,6 +140,11 @@ namespace Flash_dl
                 // Tell backend to download the video spceifed to destination spceifed in the variable
                 symmBackend.DownloadVideo(video, settings);
             }
+        }
+
+        public static string GetHeader()
+        {
+            return string.Format("{0} {1}", applicationName, applicationVersionVerboseName);
         }
 
         /// <summary>

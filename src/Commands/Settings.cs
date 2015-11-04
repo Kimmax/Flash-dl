@@ -11,11 +11,30 @@ namespace Flash_dl.Commands
 {
     public static class Settings
     {
-        public static string APIKey(string apikey)
+        public static string APIKey(string apikey = null)
         {
+            if(apikey == null)
+            {
+                Console.WriteLine(Backend.GetHeader());
+                Console.Write("\nPlease enter your api key and press enter: ");
+                apikey = Console.ReadLine();
+                if (String.IsNullOrEmpty(apikey))
+                {
+                    Console.WriteLine("Entered key is not valid. Leave? [Y]es [N]o: ");
+                    if (Console.ReadKey().Key == ConsoleKey.Y)
+                        DefaultCommands.Exit();
+                    else
+                    {
+                        Console.Clear();
+                        APIKey();
+                        return null;
+                    }
+                }
+            }
+
             Properties.Settings.Default.youtubeApiKey = apikey;
             Properties.Settings.Default.Save();
-            return String.Format("Set api key to \"{0}\".", apikey);
+            return String.Format("Set api key to \"{0}\".", Properties.Settings.Default.youtubeApiKey);
         }
 
         public static string SavePath(string path = "default")
@@ -89,7 +108,7 @@ namespace Flash_dl.Commands
                     return "Settings were NOT resettet.";
             }
 
-            Console.WriteLine(APIKey("NONE"));
+            Console.WriteLine(APIKey());
             Console.WriteLine(SavePath());
             Console.WriteLine(DuplicateChecking(true));
             Console.WriteLine(DefaultAudioFormat("mp3"));
