@@ -163,7 +163,7 @@ namespace Flash_dl
 
             // Need the full Namespace for this:
             Type commandLibaryClass =
-                current.GetType(_commandNamespace + "." + command.LibraryClassName);
+                current.GetType(_commandNamespace + "." + command.LibraryClassName, false, true);
 
             object[] inputArgs = null;
             if (methodParameterValueList.Count > 0)
