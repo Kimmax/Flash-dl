@@ -45,6 +45,7 @@ namespace Flash_dl
             output += GetHeader() + "\n";
             output += "DownloadVideo http://youtube.com/watch?v=abcdefg - Downloads the video from the URL to your Video folder.\n";
             output += "DownloadAudio http://youtube.com/watch?v=abcdefg - Downloads the video from the URL, coverts it to audio and saves it.\n";
+            output += "StreamAudio   http://youtube.com/watch?v=abcdefg - Streams directly audio only!\n";
             output += "DownloadPlaylist https://www.youtube.com/watch?list=abcdefg - Downloads a whole playlist from youtube.\n";
             output += "Settings can be set by entering 'settings.[setting] [value]' - For more info type in 'settings.help'\n";
             output += "Exit - Closes the application. Goodbye!";
@@ -64,6 +65,42 @@ namespace Flash_dl
             Backend.symmBackend.LoadVideosFromURL(settings.DownloadURL);
             Console.WriteLine("Loaded. Downloading, please wait..");
             Backend.StartDownload(settings);
+
+            // Clean up after work is done
+            rawVideoList = new List<YouTubeVideo>();
+            symmBackend.ResetEvents();
+        }
+
+        public static void StartStream(SYMMSettings settings)
+        {
+            symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
+
+            symmBackend.OnVideoInformationLoaded += (s, e) =>
+            {
+                rawVideoList.Add(e.Video);
+            };
+
+            symmBackend.OnStreamPostionChanged += (dsender, deventargs) =>
+            {
+                // Show progress on GUI
+                DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
+            };
+
+            // Register finished download of one video
+            symmBackend.OnStreamComplete += (dsender, deventargs) =>
+            {
+                Console.WriteLine(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
+            };
+
+            Console.WriteLine("Loading data..");
+            Backend.symmBackend.LoadVideosFromURL(settings.DownloadURL);
+            Console.WriteLine("Loaded. Streaming..");
+
+            foreach (YouTubeVideo video in rawVideoList)
+            {
+                Console.WriteLine(String.Format("\"{0}\"", video.VideoTitle));
+                symmBackend.StreamAudio(video, settings);
+            }
 
             // Clean up after work is done
             rawVideoList = new List<YouTubeVideo>();
