@@ -24,4 +24,4 @@
 
 ### License <a name="license"></a>
 
-Licensed under [GNU](https://github.com/di48l069/Flash-dl/blob/master/LICENSE). 
+Licensed under [GPL](https://github.com/di48l069/Flash-dl/blob/master/LICENSE). 
