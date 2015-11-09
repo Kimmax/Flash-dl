@@ -52,28 +52,13 @@ namespace Flash_dl
             return output;
         }
 
-        public static void LoadByURL(SYMMSettings settings)
+        public static void Execute(SYMMSettings settings)
         {
             symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
 
-            symmBackend.OnVideoInformationLoaded += (s, e) =>
-            {
-                rawVideoList.Add(e.Video);
-            };
-
-            Console.WriteLine("Loading data..");
-            Backend.symmBackend.LoadVideosFromURL(settings.DownloadURL);
-            Console.WriteLine("Loaded. Downloading, please wait..");
-            Backend.StartDownload(settings);
-
-            // Clean up after work is done
-            rawVideoList = new List<YouTubeVideo>();
-            symmBackend.ResetEvents();
-        }
-
-        public static void StartStream(SYMMSettings settings)
-        {
-            symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
+            // Create save folder, when not existent and not streaming
+            if (settings.Action != SYMMSettings.Actions.Stream && !Directory.Exists(settings.SavePath))
+                Directory.CreateDirectory(settings.SavePath);
 
             symmBackend.OnVideoInformationLoaded += (s, e) =>
             {
@@ -91,30 +76,6 @@ namespace Flash_dl
             {
                 Console.WriteLine(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
             };
-
-            Console.WriteLine("Loading data..");
-            Backend.symmBackend.LoadVideosFromURL(settings.DownloadURL);
-            Console.WriteLine("Loaded. Streaming..");
-
-            foreach (YouTubeVideo video in rawVideoList)
-            {
-                Console.WriteLine(String.Format("\"{0}\"", video.VideoTitle));
-                symmBackend.StreamAudio(video, settings);
-            }
-
-            // Clean up after work is done
-            rawVideoList = new List<YouTubeVideo>();
-            symmBackend.ResetEvents();
-        }
-
-        private static void StartDownload(SYMMSettings settings)
-        {
-            // Check if folder exist, create it if not
-            if (!Directory.Exists(settings.SavePath))
-                Directory.CreateDirectory(settings.SavePath);
-
-            // Reset event controlling max Downloads. If workingVideos >= maxSynDownloadVideo the thread waits for this event to set
-            ManualResetEvent resetEvent = new ManualResetEvent(false);
 
             // Register changed download progress of one video Audio process counts as 75% work
             symmBackend.OnVideoDownloadProgressChanged += (dsender, deventargs) =>
@@ -157,26 +118,35 @@ namespace Flash_dl
                 Console.WriteLine(String.Format("Video failed to download: \"{0}\"", deventargs.Video.VideoTitle));
             };
 
+            Console.WriteLine("Loading data..");
+            symmBackend.LoadVideosFromURL(settings.DownloadURL);
+            Console.WriteLine("Loaded. Starting work!");
+
             // We want to download every video in this list
             foreach (YouTubeVideo video in rawVideoList)
             {
                 Console.WriteLine(String.Format("\"{0}\"", video.VideoTitle));
 
-                // Prepare backend
-                settings.PathSafefileName = symmBackend.BuildPathSafeName(video.VideoTitle);
-
-                if (settings.CheckDuplicate && Directory.GetFiles(settings.SavePath, settings.PathSafefileName + ".*").Length > 0)
+                if (settings.Action != SYMMSettings.Actions.Stream)
                 {
-                    // Looks like we downloaded that already. Skip.
-                    Console.WriteLine(String.Format("Looks like we already downloaded \"{0}\".\nPass 'noduplicatecheck' as parameter to ignore this.", video.VideoTitle));
+                    // Prepare backend
+                    settings.PathSafefileName = symmBackend.BuildPathSafeName(video.VideoTitle);
 
-                    // Skip the rest
-                    continue;
+                    if (settings.CheckDuplicate && Directory.GetFiles(settings.SavePath, settings.PathSafefileName + ".*").Length > 0)
+                    {
+                        // Looks like we downloaded that already. Skip.
+                        Console.WriteLine(String.Format("Looks like we already downloaded \"{0}\".\nSet 'settings.duplicatecheck' to false to ignore this.", video.VideoTitle));
+
+                        // Skip the rest
+                        continue;
+                    }
                 }
 
                 // Tell backend to download the video spceifed to destination spceifed in the variable
-                symmBackend.DownloadVideo(video, settings);
+                symmBackend.Execute(video, settings);
             }
+
+            symmBackend = null;
         }
 
         public static string GetHeader()

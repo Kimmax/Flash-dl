@@ -32,7 +32,7 @@ namespace Flash_dl.Commands
         public static string DownloadVideo(string url)
         {
             SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, Properties.Settings.Default.DefaultVideoResolution, Properties.Settings.Default.DuplicateChecking);
-            Backend.LoadByURL(settings);
+            Backend.Execute(settings);
 
             // No direct output. Command feedback comes from backend.
             return "";
@@ -41,7 +41,7 @@ namespace Flash_dl.Commands
         public static string DownloadAudio(string url)
         {
             SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.ExtractAudio, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
-            Backend.LoadByURL(settings);
+            Backend.Execute(settings);
             
             // No direct output. Command feedback comes from backend.
             return "";
@@ -50,7 +50,7 @@ namespace Flash_dl.Commands
         public static string StreamAudio(string url)
         {
             SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.Stream, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
-            Backend.StartStream(settings);
+            Backend.Execute(settings);
 
             // No direct output. Command feedback comes from backend.
             return "";
