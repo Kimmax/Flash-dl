@@ -17,4 +17,4 @@
 
 ### License <a name="license"></a>
 
-Licensed under [GNU](http://www.gnu.org/licenses/gpl-3.0.en.html). 
+Licensed under [GNU](https://github.com/di48l069/Flash-dl/blob/master/LICENSE). 
