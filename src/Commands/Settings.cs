@@ -43,7 +43,7 @@ namespace Flash_dl.Commands
             {
                 Properties.Settings.Default.SavePath = Path.Combine(GetDownloadFolderPath(), "Flash-dl");
                 Properties.Settings.Default.Save();
-                return String.Format("Set api key to \"{0}\".", Properties.Settings.Default.SavePath);
+                return String.Format("Set default download path to \"{0}\".", Properties.Settings.Default.SavePath);
             }
             else
             {
@@ -52,7 +52,7 @@ namespace Flash_dl.Commands
                     Path.GetFullPath(path);
                     Properties.Settings.Default.SavePath = path;
                     Properties.Settings.Default.Save();
-                    return String.Format("Set api key to \"{0}\".", Properties.Settings.Default.SavePath);
+                    return String.Format("Set default download path to \"{0}\".", Properties.Settings.Default.SavePath);
                 }catch
                 {
                     return "This is not a valid folder path.";
