@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SYMM_Backend;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -39,7 +40,7 @@ namespace Flash_dl.Commands
 
         public static string DownloadAudio(string url)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, true, Properties.Settings.Default.DuplicateChecking, (SYMM_Backend.SYMMFileFormats.AudioFormats)Enum.Parse(typeof(SYMM_Backend.SYMMFileFormats.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
+            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.ExtractAudio, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
             Backend.LoadByURL(settings);
             
             // No direct output. Command feedback comes from backend.
@@ -48,7 +49,7 @@ namespace Flash_dl.Commands
 
         public static string StreamAudio(string url)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, true, Properties.Settings.Default.DuplicateChecking, (SYMM_Backend.SYMMFileFormats.AudioFormats)Enum.Parse(typeof(SYMM_Backend.SYMMFileFormats.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
+            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.Stream, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
             Backend.StartStream(settings);
 
             // No direct output. Command feedback comes from backend.

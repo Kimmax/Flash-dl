@@ -120,7 +120,7 @@ namespace Flash_dl
             symmBackend.OnVideoDownloadProgressChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                if (settings.ExtractAudio)
+                if (settings.Action == SYMMSettings.Actions.ExtractAudio)
                 {
                     DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4, 100, 60, '#');
                 }
@@ -134,7 +134,7 @@ namespace Flash_dl
             symmBackend.OnVideoAudioExtractionProgressChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                if (settings.ExtractAudio)
+                if (settings.Action == SYMMSettings.Actions.ExtractAudio)
                 {
                     DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4 + 75, 100, 60, '#');
                 }
@@ -165,9 +165,9 @@ namespace Flash_dl
                 // Prepare backend
                 settings.PathSafefileName = symmBackend.BuildPathSafeName(video.VideoTitle);
 
-                // Looks like we downloaded that already. Skip.
-                if (Directory.GetFiles(settings.SavePath, settings.PathSafefileName + ".*").Length > 0)
+                if (settings.CheckDuplicate && Directory.GetFiles(settings.SavePath, settings.PathSafefileName + ".*").Length > 0)
                 {
+                    // Looks like we downloaded that already. Skip.
                     Console.WriteLine(String.Format("Looks like we already downloaded \"{0}\".\nPass 'noduplicatecheck' as parameter to ignore this.", video.VideoTitle));
 
                     // Skip the rest
