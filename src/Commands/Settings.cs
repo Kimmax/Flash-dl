@@ -105,7 +105,7 @@ namespace Flash_dl.Commands
                 Console.WriteLine("Are you sure you want to reset the settings?");
                 Console.Write("Reset: [Y]es or [N]o? ");
                 if (Console.ReadKey().Key != ConsoleKey.Y)
-                    return "Settings were NOT resettet.";
+                    return "Settings were NOT reset.";
             }
 
             Console.WriteLine(APIKey());
@@ -122,8 +122,8 @@ namespace Flash_dl.Commands
         public static string Show()
         {
             string output = "Current Settings:\n--------------------\n";
-            output += String.Format("ApiKey: {0}\n", Properties.Settings.Default.youtubeApiKey);
-            output += String.Format("SavePath: {0}\n", Properties.Settings.Default.SavePath);
+            output += String.Format("API key: {0}\n", Properties.Settings.Default.youtubeApiKey);
+            output += String.Format("Save path: {0}\n", Properties.Settings.Default.SavePath);
             output += String.Format("Duplicate checking: {0}\n", Properties.Settings.Default.DuplicateChecking ? "enabled" : "disabled");
             output += String.Format("Default aduio format: {0}\n", Properties.Settings.Default.DefaultAudioFormat);
             output += String.Format("Default audio bitrate: {0}kbit/s\n", Properties.Settings.Default.DefaultAudioBitrate);
@@ -135,8 +135,8 @@ namespace Flash_dl.Commands
         {
             string output = "To set settings you have to enter 'settings.settingNameHere' and pass the values you wan't to set:\n";
             output += "[parameter] = optional, foo|bar = choose one, foobar = required\n";
-            output += String.Format("Settings.APIKey [enter apikey here] - Sets the apikey to the value specefeid or deletes it when not passed.\n");
-            output += String.Format("Settings.SavePath [savepath] - Sets the savepath to the value specefeid or to the default value if none is passed.\n");
+            output += String.Format("Settings.APIKey [enter apikey here] - Sets the apikey to the value specified or deletes it when not passed.\n");
+            output += String.Format("Settings.SavePath [savepath] - Sets the savepath to the value specified or to the default value if none is passed.\n");
             output += String.Format("Settings.DuplicateChecking true|false - Enables or disabled duplicate checking.\n");
             
             string formatList = "";
