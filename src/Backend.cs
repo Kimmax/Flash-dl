@@ -55,6 +55,7 @@ namespace Flash_dl
         public static void Execute(SYMMSettings settings)
         {
             symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
+            rawVideoList = new List<YouTubeVideo>();
 
             // Create save folder, when not existent and not streaming
             if (settings.Action != SYMMSettings.Actions.Stream && !Directory.Exists(settings.SavePath))
