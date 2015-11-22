@@ -1,0 +1,3 @@
+[submodule "lib/ConsoleMenu"]
+	path = lib/ConsoleMenu
+	url = https://github.com/Kimmax/ConsoleMenu.git
