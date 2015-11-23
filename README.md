@@ -12,7 +12,7 @@
 ### Features <a name="features"></a>
 * Download Youtube video
 * Extract Youtube audio
-* Stream audio
+* Stream audio (single & playlist)
 * Settings
   * API key - Sets the apikey to the value specified or deletes it when not passed.
   * Save path - Sets the savepath to the value specified or to the default value if none is passed.
@@ -22,10 +22,7 @@
   * Audio bitrate - Sets the default audio bitrate
   
 ### Planned features
-
 * Download Playlist
-* Stream Playlist `link`
-* Menu system
 
 ### License <a name="license"></a>
 
