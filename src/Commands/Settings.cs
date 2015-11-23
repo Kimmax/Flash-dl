@@ -15,7 +15,6 @@ namespace Flash_dl.Commands
         {
             if(apikey == null)
             {
-                Console.WriteLine(Backend.GetHeader());
                 Console.Write("\nPlease enter your api key and press enter: ");
                 apikey = Console.ReadLine();
                 if (String.IsNullOrEmpty(apikey))
