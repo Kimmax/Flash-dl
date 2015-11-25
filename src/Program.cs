@@ -25,7 +25,9 @@ namespace Flash_dl
         private static bool isDev = false;
         private static bool running = true;
         private static LayerManager menu = new LayerManager();
-        private static Block titleBar, mainSection, inputField;
+        private static Block titleBar, mainMenu, typeMenu, inputField;
+
+        private static string[] actionIndex = new string[] { "Download video", "Download audio", "Stream audio" };
         #endregion
 
         static void Main(string[] args)
@@ -39,7 +41,8 @@ namespace Flash_dl
             SetUpViews();
 
             menu.AddLayer(titleBar);
-            menu.AddLayer(mainSection);
+            menu.AddLayer(mainMenu);
+            menu.AddLayer(typeMenu);
 
             Run();
         }
@@ -48,56 +51,89 @@ namespace Flash_dl
         {
             while (running)
             {
-                int selectedFromMain = GetSelectedItem(mainSection);
-                mainSection.IsVisible = false;
-                menu.Draw();
-                string url = ReadFromInput("Please enter the url below:");
+                symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
 
-                /*   1) Video
-                 *   2) Audio of video
-                 *   3) Stream audio of video
-                 *   4) Playlist
-                 *   5) Audio of playlist
-                 *   6) Stream audio of a playlist
-                 *   7) Unkown -> parse url
-                 */
-                
-                switch(selectedFromMain)
+                int selectedFromMain = GetSelectedItem(mainMenu);
+                mainMenu.IsVisible = false;
+                menu.Draw();
+
+                typeMenu.WriteTextAt(new Position(0, 0), actionIndex[selectedFromMain -1] + " of..");
+                int selectedFromType = GetSelectedItem(typeMenu);
+                typeMenu.IsVisible = false;
+                menu.Draw();
+
+                string downloadData = "";
+                if (selectedFromType != 3)
+                    downloadData = ReadFromInput("Please enter the url below:");
+                else
+                    downloadData = ReadFromInput("Please enter the channel name below:");
+
+                switch (selectedFromMain)
                 {
                     case 1:
                     {
-                        DownloadVideo(url);
+                        if (selectedFromType == 1)
+                        {
+                            DownloadVideo(downloadData, SYMMSettings.Mode.Single);
+                        }
+                        else if (selectedFromType == 2)
+                        {
+                            DownloadVideo(downloadData, SYMMSettings.Mode.All);
+                        }
+                        else if (selectedFromType == 3)
+                        {
+                            string playlistURL = symmBackend.GetYoutubeChannelPlaylist(downloadData);
+                            DownloadVideo(playlistURL, SYMMSettings.Mode.All);
+                        }
+
                         break;
                     }
                     case 2:
                     {
-                        DownloadAudio(url);
+                        if (selectedFromType == 1)
+                        {
+                            DownloadAudio(downloadData, SYMMSettings.Mode.Single);
+                        }
+                        else if (selectedFromType == 2)
+                        {
+                            DownloadAudio(downloadData, SYMMSettings.Mode.All);
+                        }
+                        else if (selectedFromType == 3)
+                        {
+                            string playlistURL = "https://www.youtube.com/list=" + symmBackend.GetYoutubeChannelPlaylist(downloadData);
+                            DownloadAudio(playlistURL, SYMMSettings.Mode.All);
+                        }
+
                         break;
                     }
                     case 3:
-                    case 6:
                     {
-                        StreamAudio(url);
+                        if (selectedFromType == 1)
+                        {
+                            StreamAudio(downloadData, SYMMSettings.Mode.Single);
+                        }
+                        else if (selectedFromType == 2)
+                        {
+                            StreamAudio(downloadData, SYMMSettings.Mode.All);
+                        }
+                        else if (selectedFromType == 3)
+                        {
+                            string playlistURL = "https://www.youtube.com/list=" + symmBackend.GetYoutubeChannelPlaylist(downloadData);
+                            StreamAudio(playlistURL, SYMMSettings.Mode.All);
+                        }
+
                         break;
-                    }
-                    case 4:
-                    case 5:
-                    {
-                        DownloadPlaylist(url);
-                        break;
-                    }
-                    case 7:
-                    {
-                        throw new NotImplementedException();
                     }
                 }
 
+                symmBackend = null;
             }
         }
 
         static int GetSelectedItem(Block view, int preSelected = 1)
         {
             view.SetSelectedLine(preSelected);
+            view.IsVisible = true;
             menu.SetSelectedLayer(view);
             menu.Draw();
 
@@ -107,23 +143,23 @@ namespace Flash_dl
                 ConsoleKey pressedKey = Console.ReadKey().Key;
                 if (pressedKey == ConsoleKey.DownArrow)
                 {
-                    int newSelectedIndex = mainSection.GetSelectedLine() + 1;
+                    int newSelectedIndex = view.GetSelectedLine() + 1;
 
-                    if (mainSection.IsSelectableBuffer.Length - 1 >= newSelectedIndex && mainSection.IsSelectableBuffer[newSelectedIndex] == true)
-                        mainSection.SetSelectedLine(mainSection.GetSelectedLine() + 1);
+                    if (view.IsSelectableBuffer.Length - 1 >= newSelectedIndex && view.IsSelectableBuffer[newSelectedIndex] == true)
+                        view.SetSelectedLine(view.GetSelectedLine() + 1);
 
                 }
                 else if (pressedKey == ConsoleKey.UpArrow)
                 {
-                    int newSelectedIndex = mainSection.GetSelectedLine() - 1;
+                    int newSelectedIndex = view.GetSelectedLine() - 1;
 
-                    if (mainSection.IsSelectableBuffer.Length - 1 >= newSelectedIndex && mainSection.IsSelectableBuffer[newSelectedIndex] == true)
-                        mainSection.SetSelectedLine(mainSection.GetSelectedLine() - 1);
+                    if (view.IsSelectableBuffer.Length - 1 >= newSelectedIndex && view.IsSelectableBuffer[newSelectedIndex] == true)
+                        view.SetSelectedLine(view.GetSelectedLine() - 1);
 
                 }
                 else if (pressedKey == ConsoleKey.Enter)
                 {
-                    selectedItem = mainSection.GetSelectedLine();
+                    selectedItem = view.GetSelectedLine();
                 }
 
                 menu.Draw();
@@ -182,29 +218,39 @@ namespace Flash_dl
             titleBar.WriteTextAt(new Position(1, 0), GetTitle());
 
             // Setup main menu
-            Size menuSize = new Size(8, 35);
-            Position menuPos = new Position((Console.WindowWidth - menuSize.Width) / 2, (Console.WindowHeight - menuSize.Height) / 2);
+            Size mainMenuSize = new Size(4, 35);
+            Position mainMenuPos = new Position((Console.WindowWidth - mainMenuSize.Width) / 2, (Console.WindowHeight - mainMenuSize.Height) / 2);
 
-            mainSection = new Block(menuPos, menuSize);
+            mainMenu = new Block(mainMenuPos, mainMenuSize);
 
-            mainSection.WriteTextAt(new Position(0, 0), "What would you like to do?");
-            mainSection.WriteTextAt(new Position(0, 1), "$<Black,Gray,Gray,Black>Download a video");
-            mainSection.WriteTextAt(new Position(0, 2), "$<Black,Gray,Gray,Black>Download audio of a video");
-            mainSection.WriteTextAt(new Position(0, 3), "$<Black,Gray,Gray,Black>Stream audio of video");
-            mainSection.WriteTextAt(new Position(0, 4), "$<Black,Gray,Gray,Black>Download a playlist");
-            mainSection.WriteTextAt(new Position(0, 5), "$<Black,Gray,Gray,Black>Download audio of a video");
-            mainSection.WriteTextAt(new Position(0, 6), "$<Black,Gray,DarkGray,Black>Stream audio of a playlist");
-            mainSection.WriteTextAt(new Position(0, 7), "$<Black,Gray,DarkGray,Black>I don't know, but I have a URL!");
+            mainMenu.WriteTextAt(new Position(0, 0), "What would you like to do?");
+            mainMenu.WriteTextAt(new Position(0, 1), String.Format("$<Black,Gray,Gray,Black>{0} of..", actionIndex[0]));
+            mainMenu.WriteTextAt(new Position(0, 2), String.Format("$<Black,Gray,Gray,Black>{0} of..", actionIndex[1]));
+            mainMenu.WriteTextAt(new Position(0, 3), String.Format("$<Black,Gray,Gray,Black>{0} of..", actionIndex[2]));
 
-            mainSection.IsSelectableBuffer[1] = true;
-            mainSection.IsSelectableBuffer[2] = true;
-            mainSection.IsSelectableBuffer[3] = true;
-            mainSection.IsSelectableBuffer[4] = false;
-            mainSection.IsSelectableBuffer[5] = false;
-            mainSection.IsSelectableBuffer[6] = true;
-            mainSection.IsSelectableBuffer[7] = false;
+            mainMenu.IsSelectableBuffer[1] = true;
+            mainMenu.IsSelectableBuffer[2] = true;
+            mainMenu.IsSelectableBuffer[3] = true;
         
-            mainSection.SetSelectedLine(1);
+            mainMenu.SetSelectedLine(1);
+
+            // Setup type menu
+            Size typeMenuSize = new Size(4, 35);
+            Position typeMenuPos = new Position((Console.WindowWidth - mainMenuSize.Width) / 2, (Console.WindowHeight - mainMenuSize.Height) / 2);
+
+            typeMenu = new Block(typeMenuPos, typeMenuSize);
+
+            typeMenu.WriteTextAt(new Position(0, 0), "DO ACTION ON TYPE");
+            typeMenu.WriteTextAt(new Position(0, 1), "$<Black,Gray,Gray,Black>a video");
+            typeMenu.WriteTextAt(new Position(0, 2), "$<Black,Gray,Gray,Black>a playlist");
+            typeMenu.WriteTextAt(new Position(0, 3), "$<Black,Gray,Gray,Black>a whole channel");
+
+            typeMenu.IsSelectableBuffer[1] = true;
+            typeMenu.IsSelectableBuffer[2] = true;
+            typeMenu.IsSelectableBuffer[3] = true;
+
+            typeMenu.SetSelectedLine(1);
+            typeMenu.IsVisible = false;
         }
 
         private static void DrawProgressBar(int complete, int maxVal, int barSize, char progressCharacter)
@@ -231,32 +277,26 @@ namespace Flash_dl
         }
 
         #region WORK METHODS
-        static void DownloadVideo(string url)
+        static void DownloadVideo(string url, SYMMSettings.Mode mode)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, Properties.Settings.Default.DefaultVideoResolution, Properties.Settings.Default.DuplicateChecking);
+            SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, mode, Properties.Settings.Default.DefaultVideoResolution, Properties.Settings.Default.DuplicateChecking);
             Execute(settings);
         }
 
-        public static void DownloadAudio(string url)
+        public static void DownloadAudio(string url, SYMMSettings.Mode mode)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.ExtractAudio, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
+            SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.ExtractAudio, mode, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
             Execute(settings);
         }
 
-        public static void StreamAudio(string url)
+        public static void StreamAudio(string url, SYMMSettings.Mode mode)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.Stream, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
+            SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.Stream, mode, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
             Execute(settings);
-        }
-
-        public static string DownloadPlaylist(string url)
-        {
-            throw new NotImplementedException();
         }
 
         public static void Execute(SYMMSettings settings)
         {
-            symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
             rawVideoList = new List<YouTubeVideo>();
 
             // Create save folder, when not existent and not streaming
@@ -322,7 +362,7 @@ namespace Flash_dl
             };
 
             Console.WriteLine("Loading data..");
-            symmBackend.LoadVideosFromURL(settings.DownloadURL);
+            symmBackend.LoadVideosFromURL(settings);
             Console.WriteLine("Loaded. Starting work!");
 
             // We want to download every video in this list
@@ -348,8 +388,6 @@ namespace Flash_dl
                 // Tell backend to download the video spceifed to destination spceifed in the variable
                 symmBackend.Execute(video, settings);
             }
-
-            symmBackend = null;
         }
         #endregion
     }
