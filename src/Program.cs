@@ -171,7 +171,7 @@ namespace Flash_dl
         static string ReadFromInput(string prompt)
         {
             // Setup input field
-            Size inputSize = new Size(2, 35);
+            Size inputSize = new Size(2, 36);
             Position inputPos = new Position((Console.WindowWidth - inputSize.Width) / 2, (Console.WindowHeight - inputSize.Height) / 2);
 
             inputField = new Block(inputPos, inputSize, ConsoleColor.Black, ConsoleColor.Gray);
