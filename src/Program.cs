@@ -118,8 +118,7 @@ namespace Flash_dl
                         }
                         else if (selectedFromType == 3)
                         {
-                            string playlistURL = "https://www.youtube.com/list=" + symmBackend.GetYoutubeChannelPlaylist(downloadData);
-                            StreamAudio(playlistURL, SYMMSettings.Mode.All);
+                            StreamAudio(symmBackend.GetYoutubeChannelPlaylist(downloadData), SYMMSettings.Mode.All);
                         }
 
                         break;
