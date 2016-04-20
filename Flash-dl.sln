@@ -27,10 +27,6 @@ Global
 		{ECDC127F-8DEF-4F99-8300-72C13597339D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ECDC127F-8DEF-4F99-8300-72C13597339D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ECDC127F-8DEF-4F99-8300-72C13597339D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CADC743D-37F7-41F2-B27A-49F767BFB6DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CADC743D-37F7-41F2-B27A-49F767BFB6DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CADC743D-37F7-41F2-B27A-49F767BFB6DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CADC743D-37F7-41F2-B27A-49F767BFB6DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

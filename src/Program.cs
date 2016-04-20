@@ -3,354 +3,391 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using SYMM_Backend;
-using Nuernberger.ConsoleMenu;
-using System.Threading;
-using System.IO;
 
 namespace Flash_dl
 {
     class Program
     {
-        #region Private fields
-        private const string applicationName = "Flash-dl";
-        private static readonly Version applicationVersion = Assembly.GetExecutingAssembly().GetName().Version;
-        private static readonly string applicationVersionName = string.Format("v{0}.{1}", applicationVersion.Major, applicationVersion.Minor, applicationVersion.Build, applicationVersion.Revision);
-        private static readonly string applicationVersionVerboseName = string.Format("v{0}.{1} Patch {2} Build {3}", applicationVersion.Major, applicationVersion.Minor, applicationVersion.Build, applicationVersion.Revision);
+        const string _commandNamespace = "Flash_dl.Commands";
+        static Dictionary<string, Dictionary<string, IEnumerable<ParameterInfo>>> _commandLibraries;
 
-        public static SYMMHandler symmBackend;
-
-        // Videolist used to store all videos that are about to get downloaded
-        private static List<YouTubeVideo> rawVideoList = new List<YouTubeVideo>();
-
-        private static bool isDev = false;
-        private static bool running = true;
-        private static LayerManager menu = new LayerManager();
-        private static Block titleBar, mainSection, inputField;
-        #endregion
+        const string _readPrompt = "\nFlash-dl> ";
+        private const ConsoleColor _readPromtColor = ConsoleColor.DarkGreen;
+        private const ConsoleColor _readCommandColor = ConsoleColor.White;
+        private const ConsoleColor _promtCommandInvalidParameterColor = ConsoleColor.DarkYellow;
+        private const ConsoleColor _promtCommandOutputColor = ConsoleColor.Gray;
+        private const ConsoleColor _promtCommandOutputErrorColor = ConsoleColor.Red;
 
         static void Main(string[] args)
         {
-            Console.Title = GetTitle();
-            if (!isDev && Properties.Settings.Default.SettingsNeedReset)
+            Backend.UpdateTitle();
+            if (Properties.Settings.Default.SettingsNeedReset)
                 Commands.Settings.Reset(true);
 
-            Console.CursorVisible = false;
+            // Any static classes containing commands for use from the 
+            // console are located in the Commands namespace. Load 
+            // references to each type in that namespace via reflection:
+            _commandLibraries = new Dictionary<string, Dictionary<string, IEnumerable<ParameterInfo>>>(StringComparer.OrdinalIgnoreCase);
 
-            SetUpViews();
+            // Use reflection to load all of the classes in the Commands namespace:
+            var q = from t in Assembly.GetExecutingAssembly().GetTypes()
+                    where t.IsClass && t.Namespace == _commandNamespace
+                    select t;
+            var commandClasses = q.ToList();
 
-            menu.AddLayer(titleBar);
-            menu.AddLayer(mainSection);
-
+            foreach (var commandClass in commandClasses)
+            {
+                // Load the method info from each class into a dictionary:
+                var methods = commandClass.GetMethods(BindingFlags.Static | BindingFlags.Public);
+                var methodDictionary = new Dictionary<string, IEnumerable<ParameterInfo>>(StringComparer.OrdinalIgnoreCase);
+                foreach (var method in methods)
+                {
+                    string commandName = method.Name;
+                    methodDictionary.Add(commandName, method.GetParameters());
+                }
+                // Add the dictionary of methods for the current class into a dictionary of command classes:
+                _commandLibraries.Add(commandClass.Name, methodDictionary);
+            }
             Run();
         }
 
         static void Run()
         {
-            while (running)
-            {
-                int selectedFromMain = GetSelectedItem(mainSection);
-                mainSection.IsVisible = false;
-                menu.Draw();
-                string url = ReadFromInput("Please enter the url below:");
+            while (true)
+            {  
+                var consoleInput = ReadFromConsole();
+                if (string.IsNullOrWhiteSpace(consoleInput)) continue;
 
-                /*   1) Video
-                 *   2) Audio of video
-                 *   3) Stream audio of video
-                 *   4) Playlist
-                 *   5) Audio of playlist
-                 *   6) Stream audio of a playlist
-                 *   7) Unkown -> parse url
-                 */
-                
-                switch(selectedFromMain)
+                try
                 {
-                    case 1:
-                    {
-                        DownloadVideo(url);
-                        break;
-                    }
-                    case 2:
-                    {
-                        DownloadAudio(url);
-                        break;
-                    }
-                    case 3:
-                    case 6:
-                    {
-                        StreamAudio(url);
-                        break;
-                    }
-                    case 4:
-                    case 5:
-                    {
-                        DownloadPlaylist(url);
-                        break;
-                    }
-                    case 7:
-                    {
-                        throw new NotImplementedException();
-                    }
-                }
+                    // Create a ConsoleCommand instance:
+                    var cmd = new ConsoleCommand(consoleInput);
 
+                    // Execute the command:
+                    string result = Execute(cmd);
+
+                    // Write out the result:
+                    WriteToConsole(result);
+                }
+                catch (Exception ex)
+                {
+                    // OOPS! Something went wrong - Write out the problem:
+                    Console.ForegroundColor = _promtCommandOutputErrorColor;
+                    WriteToConsole(ex.Message);
+                }
             }
         }
 
-        static int GetSelectedItem(Block view, int preSelected = 1)
+
+        static string Execute(ConsoleCommand command)
         {
-            view.SetSelectedLine(preSelected);
-            menu.SetSelectedLayer(view);
-            menu.Draw();
+            // Validate the class name and command name:
+            // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-            int selectedItem = -1;
-            while (selectedItem == -1)
+            string badCommandMessage = command.Name + " not found. Enter 'help' for more information.";
+
+            // Validate the command name:
+            if (!_commandLibraries.ContainsKey(command.LibraryClassName))
             {
-                ConsoleKey pressedKey = Console.ReadKey().Key;
-                if (pressedKey == ConsoleKey.DownArrow)
-                {
-                    int newSelectedIndex = mainSection.GetSelectedLine() + 1;
-
-                    if (mainSection.IsSelectableBuffer.Length - 1 >= newSelectedIndex && mainSection.IsSelectableBuffer[newSelectedIndex] == true)
-                        mainSection.SetSelectedLine(mainSection.GetSelectedLine() + 1);
-
-                }
-                else if (pressedKey == ConsoleKey.UpArrow)
-                {
-                    int newSelectedIndex = mainSection.GetSelectedLine() - 1;
-
-                    if (mainSection.IsSelectableBuffer.Length - 1 >= newSelectedIndex && mainSection.IsSelectableBuffer[newSelectedIndex] == true)
-                        mainSection.SetSelectedLine(mainSection.GetSelectedLine() - 1);
-
-                }
-                else if (pressedKey == ConsoleKey.Enter)
-                {
-                    selectedItem = mainSection.GetSelectedLine();
-                }
-
-                menu.Draw();
+                Console.ForegroundColor = _promtCommandOutputErrorColor;
+                return badCommandMessage;
+            }
+            var methodDictionary = _commandLibraries[command.LibraryClassName];
+            if (!methodDictionary.ContainsKey(command.Name))
+            {
+                Console.ForegroundColor = _promtCommandOutputErrorColor;
+                return badCommandMessage;
             }
 
-            return selectedItem;
-        }
+            // Make sure the corret number of required arguments are provided:
+            // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-        static string ReadFromInput(string prompt)
-        {
-            // Setup input field
-            Size inputSize = new Size(2, 35);
-            Position inputPos = new Position((Console.WindowWidth - inputSize.Width) / 2, (Console.WindowHeight - inputSize.Height) / 2);
+            var methodParameterValueList = new List<object>();
+            IEnumerable<ParameterInfo> paramInfoList = methodDictionary[command.Name].ToList();
 
-            inputField = new Block(inputPos, inputSize, ConsoleColor.Black, ConsoleColor.Gray);
-            inputField.WriteTextAt(new Position(0,0), "$<Gray, Black>" + prompt + new String(' ', inputSize.Width - prompt.Length) + "$</>");
-            
-            menu.AddLayer(inputField);
-            menu.SetSelectedLayer(inputField);
-            menu.Draw();
+            // Validate proper # of required arguments provided. Some may be optional:
+            var requiredParams = paramInfoList.Where(p => p.IsOptional == false);
+            var optionalParams = paramInfoList.Where(p => p.IsOptional == true);
+            int requiredCount = requiredParams.Count();
+            int optionalCount = optionalParams.Count();
+            int providedCount = command.Arguments.Count();
 
-            Console.SetCursorPosition(inputPos.X, inputPos.Y + 1);
-            Console.CursorVisible = true;
-
-            ConsoleColor oldBackcolor = Console.BackgroundColor;
-            ConsoleColor oldForegorundColor = Console.ForegroundColor;
-
-            Console.ForegroundColor = inputField.BlockForegorundColor;
-            Console.BackgroundColor = inputField.BlockBackgroundColor;
-
-            string input = Console.ReadLine();
-
-            Console.BackgroundColor = oldBackcolor;
-            Console.ForegroundColor = oldForegorundColor;
-
-            Console.CursorVisible = false;
-
-            inputField.IsVisible = false;
-            
-            menu.Draw();
-            menu.RemoveLayer(inputField);
-            menu.Draw();
-
-            return input;
-        }
-
-        static string GetTitle()
-        {
-            return string.Format("{0} ({1})", applicationName, applicationVersionName);
-        }
-
-        static void SetUpViews()
-        {
-            // Setup titlebar
-            titleBar = new Block(new Position(0, 0), new Size(1, Console.WindowWidth), ConsoleColor.Black, ConsoleColor.Gray);
-            titleBar.WriteTextAt(new Position(1, 0), GetTitle());
-
-            // Setup main menu
-            Size menuSize = new Size(8, 35);
-            Position menuPos = new Position((Console.WindowWidth - menuSize.Width) / 2, (Console.WindowHeight - menuSize.Height) / 2);
-
-            mainSection = new Block(menuPos, menuSize);
-
-            mainSection.WriteTextAt(new Position(0, 0), "What would you like to do?");
-            mainSection.WriteTextAt(new Position(0, 1), "$<Black,Gray,Gray,Black>Download a video");
-            mainSection.WriteTextAt(new Position(0, 2), "$<Black,Gray,Gray,Black>Download audio of a video");
-            mainSection.WriteTextAt(new Position(0, 3), "$<Black,Gray,Gray,Black>Stream audio of video");
-            mainSection.WriteTextAt(new Position(0, 4), "$<Black,Gray,Gray,Black>Download a playlist");
-            mainSection.WriteTextAt(new Position(0, 5), "$<Black,Gray,Gray,Black>Download audio of a video");
-            mainSection.WriteTextAt(new Position(0, 6), "$<Black,Gray,DarkGray,Black>Stream audio of a playlist");
-            mainSection.WriteTextAt(new Position(0, 7), "$<Black,Gray,DarkGray,Black>I don't know, but I have a URL!");
-
-            mainSection.IsSelectableBuffer[1] = true;
-            mainSection.IsSelectableBuffer[2] = true;
-            mainSection.IsSelectableBuffer[3] = true;
-            mainSection.IsSelectableBuffer[4] = false;
-            mainSection.IsSelectableBuffer[5] = false;
-            mainSection.IsSelectableBuffer[6] = true;
-            mainSection.IsSelectableBuffer[7] = false;
-        
-            mainSection.SetSelectedLine(1);
-        }
-
-        private static void DrawProgressBar(int complete, int maxVal, int barSize, char progressCharacter)
-        {
-            Console.CursorVisible = false;
-            int left = Console.CursorLeft;
-            decimal perc = (decimal)complete / (decimal)maxVal;
-            int chars = (int)Math.Floor(perc / ((decimal)1 / (decimal)barSize));
-            string p1 = String.Empty, p2 = String.Empty;
-
-            for (int i = 0; i < chars; i++)
-                p1 += progressCharacter;
-            for (int i = 0; i < barSize - chars; i++)
-                p2 += progressCharacter;
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write(p1);
-            Console.ForegroundColor = ConsoleColor.DarkGreen;
-            Console.Write(p2);
-
-            Console.ResetColor();
-            Console.Write(" {0}%", (perc * 100).ToString("N2"));
-            Console.CursorLeft = left;
-        }
-
-        #region WORK METHODS
-        static void DownloadVideo(string url)
-        {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, Properties.Settings.Default.DefaultVideoResolution, Properties.Settings.Default.DuplicateChecking);
-            Execute(settings);
-        }
-
-        public static void DownloadAudio(string url)
-        {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.ExtractAudio, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
-            Execute(settings);
-        }
-
-        public static void StreamAudio(string url)
-        {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.Stream, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
-            Execute(settings);
-        }
-
-        public static string DownloadPlaylist(string url)
-        {
-            throw new NotImplementedException();
-        }
-
-        public static void Execute(SYMMSettings settings)
-        {
-            symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
-            rawVideoList = new List<YouTubeVideo>();
-
-            // Create save folder, when not existent and not streaming
-            if (settings.Action != SYMMSettings.Actions.Stream && !Directory.Exists(settings.SavePath))
-                Directory.CreateDirectory(settings.SavePath);
-
-            symmBackend.OnVideoInformationLoaded += (s, e) =>
+            if (requiredCount > providedCount)
             {
-                rawVideoList.Add(e.Video);
-            };
+                Console.ForegroundColor = _promtCommandInvalidParameterColor;
+                return string.Format(
+                    "Missing required argument. {0} required, {1} optional, {2} provided",
+                    requiredCount, optionalCount, providedCount);
+            }
 
-            symmBackend.OnStreamPostionChanged += (dsender, deventargs) =>
-            {
-                // Show progress on GUI
-                DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
-            };
+            // Make sure all arguments are coerced to the proper type, and that there is a 
+            // value for every emthod parameter. The InvokeMember method fails if the number 
+            // of arguments provided does not match the number of parameters in the 
+            // method signature, even if some are optional:
+            // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-            // Register finished download of one video
-            symmBackend.OnStreamComplete += (dsender, deventargs) =>
+            if (paramInfoList.Count() > 0)
             {
-                Console.WriteLine(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
-            };
-
-            // Register changed download progress of one video Audio process counts as 75% work
-            symmBackend.OnVideoDownloadProgressChanged += (dsender, deventargs) =>
-            {
-                // Show progress on GUI
-                if (settings.Action == SYMMSettings.Actions.ExtractAudio)
+                // Populate the list with default values:
+                foreach (var param in paramInfoList)
                 {
-                    DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4, 100, 60, '#');
-                }
-                else
-                {
-                    DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
-                }
-            };
-
-            // Register changed audio extraction progress of one video. Audio process counts as 25% work
-            symmBackend.OnVideoAudioExtractionProgressChanged += (dsender, deventargs) =>
-            {
-                // Show progress on GUI
-                if (settings.Action == SYMMSettings.Actions.ExtractAudio)
-                {
-                    DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4 + 75, 100, 60, '#');
-                }
-                else
-                {
-                    DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
+                    // This will either add a null object reference if the param is required 
+                    // by the method, or will set a default value for optional parameters. in 
+                    // any case, there will be a value or null for each method argument 
+                    // in the method signature:
+                    methodParameterValueList.Add(param.DefaultValue);
                 }
 
-            };
-
-            // Register finished download of one video
-            symmBackend.OnVideoDownloadComplete += (dsender, deventargs) =>
-            {
-                Console.WriteLine(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
-            };
-
-            // Register when a video failed to download
-            symmBackend.OnVideoDownloadFailed += (dsender, deventargs) =>
-            {
-                Console.WriteLine(String.Format("Video failed to download: \"{0}\"", deventargs.Video.VideoTitle));
-            };
-
-            Console.WriteLine("Loading data..");
-            symmBackend.LoadVideosFromURL(settings.DownloadURL);
-            Console.WriteLine("Loaded. Starting work!");
-
-            // We want to download every video in this list
-            foreach (YouTubeVideo video in rawVideoList)
-            {
-                Console.WriteLine(String.Format("\"{0}\"", video.VideoTitle));
-
-                if (settings.Action != SYMMSettings.Actions.Stream)
+                // Now walk through all the arguments passed from the console and assign 
+                // accordingly. Any optional arguments not provided have already been set to 
+                // the default specified by the method signature:
+                for (int i = 0; i < command.Arguments.Count(); i++)
                 {
-                    // Prepare backend
-                    settings.PathSafefileName = symmBackend.BuildPathSafeName(video.VideoTitle);
-
-                    if (settings.CheckDuplicate && Directory.GetFiles(settings.SavePath, settings.PathSafefileName + ".*").Length > 0)
+                    var methodParam = paramInfoList.ElementAt(i);
+                    var typeRequired = methodParam.ParameterType;
+                    object value = null;
+                    try
                     {
-                        // Looks like we downloaded that already. Skip.
-                        Console.WriteLine(String.Format("Looks like we already downloaded \"{0}\".\nSet 'settings.duplicatecheck' to false to ignore this.", video.VideoTitle));
-
-                        // Skip the rest
-                        continue;
+                        // Coming from the Console, all of our arguments are passed in as 
+                        // strings. Coerce to the type to match the method paramter:
+                        value = CoerceArgument(typeRequired, command.Arguments.ElementAt(i));
+                        methodParameterValueList.RemoveAt(i);
+                        methodParameterValueList.Insert(i, value);
+                    }
+                    catch (ArgumentException)
+                    {
+                        string argumentName = methodParam.Name;
+                        string argumentTypeName = typeRequired.Name;
+                        string message =
+                            string.Format(""
+                            + "The value passed for argument '{0}' cannot be parsed to type '{1}'",
+                            argumentName, argumentTypeName);
+                        throw new ArgumentException(message);
                     }
                 }
-
-                // Tell backend to download the video spceifed to destination spceifed in the variable
-                symmBackend.Execute(video, settings);
             }
 
-            symmBackend = null;
+            // Set up to invoke the method using reflection:
+            // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+            Assembly current = typeof(Program).Assembly;
+
+            // Need the full Namespace for this:
+            Type commandLibaryClass =
+                current.GetType(_commandNamespace + "." + command.LibraryClassName, false, true);
+
+            object[] inputArgs = null;
+            if (methodParameterValueList.Count > 0)
+            {
+                inputArgs = methodParameterValueList.ToArray();
+            }
+            var typeInfo = commandLibaryClass;
+
+            // This will throw if the number of arguments provided does not match the number 
+            // required by the method signature, even if some are optional:
+            try
+            {
+                var result = typeInfo.InvokeMember(
+                    command.Name,
+                    BindingFlags.IgnoreCase | BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public,
+                    null, null, inputArgs);
+                Console.ForegroundColor = _promtCommandOutputColor;
+                return result.ToString();
+            }
+            catch (TargetInvocationException ex)
+            {
+                throw ex.InnerException;
+            }
         }
-        #endregion
+
+
+        static object CoerceArgument(Type requiredType, string inputValue)
+        {
+            var requiredTypeCode = Type.GetTypeCode(requiredType);
+            string exceptionMessage = 
+                string.Format("Cannnot coerce the input argument {0} to required type {1}", 
+                inputValue, requiredType.Name);
+
+            object result = null;
+            switch (requiredTypeCode)
+            {
+                case TypeCode.String:
+                    result = inputValue;
+                    break;
+
+                case TypeCode.Int16:
+                    short number16;
+                    if (Int16.TryParse(inputValue, out number16))
+                    {
+                        result = number16;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+
+                case TypeCode.Int32:
+                    int number32;
+                    if (Int32.TryParse(inputValue, out number32))
+                    {
+                        result = number32;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+
+                case TypeCode.Int64:
+                    long number64;
+                    if (Int64.TryParse(inputValue, out number64))
+                    {
+                        result = number64;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+
+                case TypeCode.Boolean:
+                    bool trueFalse;
+                    if (bool.TryParse(inputValue, out trueFalse))
+                    {
+                        result = trueFalse;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+
+                case TypeCode.Byte:
+                    byte byteValue;
+                    if (byte.TryParse(inputValue, out byteValue))
+                    {
+                        result = byteValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+
+                case TypeCode.Char:
+                    char charValue;
+                    if (char.TryParse(inputValue, out charValue))
+                    {
+                        result = charValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+
+                case TypeCode.DateTime:
+                    DateTime dateValue;
+                    if (DateTime.TryParse(inputValue, out dateValue))
+                    {
+                        result = dateValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+                case TypeCode.Decimal:
+                    Decimal decimalValue;
+                    if (Decimal.TryParse(inputValue, out decimalValue))
+                    {
+                        result = decimalValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+                case TypeCode.Double:
+                    Double doubleValue;
+                    if (Double.TryParse(inputValue, out doubleValue))
+                    {
+                        result = doubleValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+                case TypeCode.Single:
+                    Single singleValue;
+                    if (Single.TryParse(inputValue, out singleValue))
+                    {
+                        result = singleValue;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+                case TypeCode.UInt16:
+                    UInt16 uInt16Value;
+                    if (UInt16.TryParse(inputValue, out uInt16Value))
+                    {
+                        result = uInt16Value;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+                case TypeCode.UInt32:
+                    UInt32 uInt32Value;
+                    if (UInt32.TryParse(inputValue, out uInt32Value))
+                    {
+                        result = uInt32Value;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+                case TypeCode.UInt64:
+                    UInt64 uInt64Value;
+                    if (UInt64.TryParse(inputValue, out uInt64Value))
+                    {
+                        result = uInt64Value;
+                    }
+                    else
+                    {
+                        throw new ArgumentException(exceptionMessage);
+                    }
+                    break;
+                default:
+                    throw new ArgumentException(exceptionMessage);
+            }
+            return result;
+        }
+
+
+        public static void WriteToConsole(string message = "")
+        {
+            if(message.Length > 0)
+            {
+                Console.WriteLine(message);
+            }
+        }
+
+        public static string ReadFromConsole(string promptMessage = "")
+        {
+            // Show a prompt, and get input:
+            Console.ForegroundColor = _readPromtColor;
+            Console.Write(_readPrompt);
+            Console.ForegroundColor = _readCommandColor;
+            Console.Write(promptMessage);
+
+            return Console.ReadLine();
+        }
     }
 }

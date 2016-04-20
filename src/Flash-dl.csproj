@@ -86,8 +86,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Backend.cs" />
     <Compile Include="Commands\DefaultCommands.cs" />
     <Compile Include="Commands\Settings.cs" />
+    <Compile Include="ConsoleCommand.cs" />
+    <Compile Include="ConsoleFormatting.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
@@ -116,10 +119,6 @@
     <ProjectReference Include="..\..\SYMM Backend\SYMM Backend.csproj">
       <Project>{48943e3b-8e97-4a65-bbe5-2c885cbaa136}</Project>
       <Name>SYMM Backend</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\lib\ConsoleMenu\src\ConsoleMenu.csproj">
-      <Project>{cadc743d-37f7-41f2-b27a-49f767bfb6dd}</Project>
-      <Name>ConsoleMenu</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
