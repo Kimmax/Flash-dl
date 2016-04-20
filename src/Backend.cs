@@ -120,7 +120,7 @@ namespace Flash_dl
             };
 
             Console.WriteLine("Loading data..");
-            symmBackend.LoadVideosFromURL(settings.DownloadURL);
+            symmBackend.LoadVideosFromURL(settings);
             Console.WriteLine("Loaded. Starting work!");
 
             // We want to download every video in this list
