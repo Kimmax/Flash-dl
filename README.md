@@ -3,8 +3,8 @@
 #### Releases & development  
 
 * stable [v0.3](https://github.com/di48l069/Flash-dl/releases/tag/v0.3.0),
-* private beta branch: [master](https://github.com/di48l069/Flash-dl)
-* private in-development branch (please commit new code here): [develop](https://github.com/di48l069/Flash-dl/tree/develop)
+* public beta branch: [master](https://github.com/di48l069/Flash-dl)
+* public in-development branch (please commit new code here): [develop](https://github.com/di48l069/Flash-dl/tree/develop)
 
 #### Quick-Index
 
