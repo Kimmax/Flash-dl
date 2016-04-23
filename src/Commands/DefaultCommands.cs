@@ -1,4 +1,6 @@
-﻿using SYMM_Backend;
+﻿using ResolveList;
+using SYMM.Interfaces;
+using SYMM_Backend;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -31,16 +33,16 @@ namespace Flash_dl.Commands
 
         public static string DownloadVideo(string url)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Mode.Single, Properties.Settings.Default.DefaultVideoResolution, Properties.Settings.Default.DuplicateChecking);
+            ISYMMSettings settings = new SYMMSettings(url, Properties.Settings.Default.SavePath, Mode.Single, Properties.Settings.Default.DefaultVideoResolution, Properties.Settings.Default.DuplicateChecking);
             Backend.Execute(settings);
-
+            
             // No direct output. Command feedback comes from backend.
             return "";
         }
 
         public static string DownloadAudio(string url)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, Properties.Settings.Default.SavePath, SYMMSettings.Actions.ExtractAudio, SYMMSettings.Mode.Single, Properties.Settings.Default.DuplicateChecking, (SYMMSettings.AudioFormats)Enum.Parse(typeof(SYMMSettings.AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
+            ISYMMSettings settings = new SYMMSettings(url, Properties.Settings.Default.SavePath, Actions.ExtractAudio, Mode.Single, Properties.Settings.Default.DuplicateChecking, (AudioFormats)Enum.Parse(typeof(AudioFormats), Properties.Settings.Default.DefaultAudioFormat, true), Properties.Settings.Default.DefaultAudioBitrate);
             Backend.Execute(settings);
             
             // No direct output. Command feedback comes from backend.
@@ -49,7 +51,7 @@ namespace Flash_dl.Commands
 
         public static string StreamAudio(string url)
         {
-            SYMM_Backend.SYMMSettings settings = new SYMM_Backend.SYMMSettings(url, SYMMSettings.Actions.Stream, SYMMSettings.Mode.Single, Properties.Settings.Default.DefaultAudioBitrate);
+            ISYMMSettings settings = new SYMMSettings(url, Actions.Stream, Mode.Single, Properties.Settings.Default.DefaultAudioBitrate);
             Backend.Execute(settings);
 
             // No direct output. Command feedback comes from backend.

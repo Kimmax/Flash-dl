@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using SYMM_Backend;
+using SYMM.Interfaces;
 
 namespace Flash_dl.Commands
 {
@@ -69,7 +70,7 @@ namespace Flash_dl.Commands
 
         public static string DefaultAudioFormat(string format)
         {
-            if (Enum.GetNames(typeof(SYMMSettings.AudioFormats)).Contains(format))
+            if (Enum.GetNames(typeof(AudioFormats)).Contains(format))
             {
                 Properties.Settings.Default.DefaultAudioFormat = format;
                 Properties.Settings.Default.Save();
@@ -78,7 +79,7 @@ namespace Flash_dl.Commands
             else
             {
                 string output = "This is not a allowed audio format.\nAllowed formarts are:\n";
-                foreach (string allowedFormat in Enum.GetNames(typeof(SYMMSettings.AudioFormats)))
+                foreach (string allowedFormat in Enum.GetNames(typeof(AudioFormats)))
                     output += allowedFormat + "\n";
                 return output;
             }
@@ -140,7 +141,7 @@ namespace Flash_dl.Commands
             output += String.Format("Settings.DuplicateChecking true|false - Enables or disabled duplicate checking.\n");
             
             string formatList = "";
-            foreach (string allowedFormat in Enum.GetNames(typeof(SYMMSettings.AudioFormats)))
+            foreach (string allowedFormat in Enum.GetNames(typeof(AudioFormats)))
                 formatList += allowedFormat + "|";
             formatList.Remove(formatList.Length - 1, 1);
 
