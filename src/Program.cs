@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using SYMM_Backend;
 
 namespace Flash_dl
 {
@@ -25,12 +24,15 @@ namespace Flash_dl
         private static int currentY = Console.WindowHeight / 2 +8;
 
         private static List<string> lines = new List<string>();
+        public static SpectrumBeatDetector sbd = new SpectrumBeatDetector(3);
 
         static void Main(string[] args)
         {
             Backend.UpdateTitle();
             if (Properties.Settings.Default.SettingsNeedReset)
-                // !!!!! DEBUG RMEOVE ME !!!! Commands.Settings.Reset(true);
+                Commands.Settings.Reset(true);
+
+            Console.Clear();
 
             // Any static classes containing commands for use from the 
             // console are located in the Commands namespace. Load 

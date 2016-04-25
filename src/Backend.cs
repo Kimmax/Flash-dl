@@ -19,7 +19,7 @@ namespace Flash_dl
         public static SYMMHandler symmBackend;
 
         // Videolist used to store all videos that are about to get downloaded
-        private static List<YouTubeVideo> rawVideoList = new List<YouTubeVideo>();
+        private static List<IYouTubeVideo> rawVideoList = new List<IYouTubeVideo>();
 
         #endregion
 
@@ -61,13 +61,13 @@ namespace Flash_dl
             return output.ToArray();
         }
 
-        public static void Execute(SYMMSettings settings)
+        public static void Execute(ISYMMSettings settings)
         {
             symmBackend = new SYMMHandler(Properties.Settings.Default.youtubeApiKey);
-            rawVideoList = new List<YouTubeVideo>();
+            rawVideoList = new List<IYouTubeVideo>();
 
             // Create save folder, when not existent and not streaming
-            if (settings.Action != SYMMSettings.Actions.Stream && !Directory.Exists(settings.SavePath))
+            if (settings.Action != Actions.Stream && !Directory.Exists(settings.SavePath))
                 Directory.CreateDirectory(settings.SavePath);
 
             symmBackend.OnVideoInformationLoaded += (s, e) =>
@@ -78,7 +78,8 @@ namespace Flash_dl
             symmBackend.OnStreamPostionChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
+                // TODO: Intregrate progress bar with spectrums
+                // DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
             };
 
             // Register finished download of one video
@@ -91,7 +92,7 @@ namespace Flash_dl
             symmBackend.OnVideoDownloadProgressChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                if (settings.Action == SYMMSettings.Actions.ExtractAudio)
+                if (settings.Action == Actions.ExtractAudio)
                 {
                     DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4, 100, 60, '#');
                 }
@@ -105,7 +106,7 @@ namespace Flash_dl
             symmBackend.OnVideoAudioExtractionProgressChanged += (dsender, deventargs) =>
             {
                 // Show progress on GUI
-                if (settings.Action == SYMMSettings.Actions.ExtractAudio)
+                if (settings.Action == Actions.ExtractAudio)
                 {
                     DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage) / 4 + 75, 100, 60, '#');
                 }
@@ -119,24 +120,29 @@ namespace Flash_dl
             symmBackend.OnVideoDownloadComplete += (dsender, deventargs) =>
             {
                 Program.WriteToConsole(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
+                Program.sbd.StopAnalysis();
             };
 
             // Register when a video failed to download
             symmBackend.OnVideoDownloadFailed += (dsender, deventargs) =>
             {
                 Program.WriteToConsole(String.Format("Video failed to download: \"{0}\"", deventargs.Video.VideoTitle));
+                Program.sbd.StopAnalysis();
             };
 
-            Program.WriteToConsole("Loading data..");
+            Program.WriteToConsole("Loading..");
             symmBackend.LoadVideosFromURL(settings);
-            Program.WriteToConsole("Loaded. Starting work!");
 
             // We want to download every video in this list
-            foreach (YouTubeVideo video in rawVideoList)
+            foreach (IYouTubeVideo video in rawVideoList)
             {
-                Program.WriteToConsole(String.Format("\"{0}\"", video.VideoTitle));
-
-                if (settings.Action != SYMMSettings.Actions.Stream)
+                Console.Clear();
+                string title = video.VideoTitle;
+                Console.SetCursorPosition(Console.WindowWidth / 2 - title.Length / 2, Console.WindowHeight / 2 - 5);
+                Console.WriteLine(title);
+                Console.SetCursorPosition(Console.WindowWidth / 2 -32, Console.CursorTop);
+                int left = Console.CursorLeft;
+                if (settings.Action != Actions.Stream)
                 {
                     // Prepare backend
                     settings.PathSafefileName = symmBackend.BuildPathSafeName(video.VideoTitle);
@@ -151,6 +157,9 @@ namespace Flash_dl
                     }
                 }
 
+                if(settings.Action == Actions.Stream)
+                    Program.sbd.StartAnalysis();
+    
                 // Tell backend to download the video spceifed to destination spceifed in the variable
                 symmBackend.Execute(video, settings);
             }
