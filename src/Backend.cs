@@ -1,11 +1,9 @@
-﻿using System;
+﻿using SYMM.Interfaces;
+using SYMM_Backend;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
-using SYMM_Backend;
-using System.Threading;
 
 namespace Flash_dl
 {
@@ -27,29 +25,40 @@ namespace Flash_dl
 
         #region Private Methods
 
+        public static string[] SayHello()
+        {
+            string[] result = new string[4];
+            result[0] = GetHeader();
+            result[1] = "Welcome to Flash-DL!";
+            result[2] = "What will we do today?";
+            result[3] = "";
+            return result;
+        }
+
         public static void UpdateTitle()
         {
             Console.Title = string.Format("{0} ({1})", applicationName, applicationVersionName);
         }
 
-        public static string Help(bool fromBadCommand = false, string command = "")
+        public static string[] Help(bool fromBadCommand = false, string command = "")
         {
-            string output = "";
+            List<string> output = new List<string>();
 
             if(fromBadCommand)
             {
                 if(!string.IsNullOrEmpty(command))
-                    output += string.Format("Command \"{0}\" not found.\nPrinting help.\n", command);
+                    output.Add(string.Format("Command \"{0}\" not found.\nPrinting help.\n", command));
             }
 
-            output += GetHeader() + "\n";
-            output += "DownloadVideo http://youtube.com/watch?v=abcdefg - Downloads the video from the URL to your Video folder.\n";
-            output += "DownloadAudio http://youtube.com/watch?v=abcdefg - Downloads the video from the URL, coverts it to audio and saves it.\n";
-            output += "StreamAudio   http://youtube.com/watch?v=abcdefg - Streams directly audio only!\n";
-            output += "DownloadPlaylist https://www.youtube.com/watch?list=abcdefg - Downloads a whole playlist from youtube.\n";
-            output += "Settings can be set by entering 'settings.[setting] [value]' - For more info type in 'settings.help'\n";
-            output += "Exit - Closes the application. Goodbye!";
-            return output;
+            output.Add("This might help you!");
+            output.Add("DownloadVideo <url> - Downloads the video");
+            output.Add("DownloadAudio <url> - Downloads audio only");
+            output.Add("StreamAudio <url> - Streams directly audio only!");
+            output.Add("DownloadPlaylist <url?list=xyz> - Downloads a playlist.");
+            output.Add("Set settings - See 'settings.help'");
+            output.Add("Exit - Goodbye!");
+
+            return output.ToArray();
         }
 
         public static void Execute(SYMMSettings settings)
@@ -75,7 +84,7 @@ namespace Flash_dl
             // Register finished download of one video
             symmBackend.OnStreamComplete += (dsender, deventargs) =>
             {
-                Console.WriteLine(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
+                Program.WriteToConsole(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
             };
 
             // Register changed download progress of one video Audio process counts as 75% work
@@ -104,29 +113,28 @@ namespace Flash_dl
                 {
                     DrawProgressBar((int)Math.Floor(deventargs.ProgressPercentage), 100, 60, '#');
                 }
-                
             };
 
             // Register finished download of one video
             symmBackend.OnVideoDownloadComplete += (dsender, deventargs) =>
             {
-                Console.WriteLine(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
+                Program.WriteToConsole(String.Format("\nVideo finsihed: \"{0}\"", deventargs.Video.VideoTitle));
             };
 
             // Register when a video failed to download
             symmBackend.OnVideoDownloadFailed += (dsender, deventargs) =>
             {
-                Console.WriteLine(String.Format("Video failed to download: \"{0}\"", deventargs.Video.VideoTitle));
+                Program.WriteToConsole(String.Format("Video failed to download: \"{0}\"", deventargs.Video.VideoTitle));
             };
 
-            Console.WriteLine("Loading data..");
+            Program.WriteToConsole("Loading data..");
             symmBackend.LoadVideosFromURL(settings);
-            Console.WriteLine("Loaded. Starting work!");
+            Program.WriteToConsole("Loaded. Starting work!");
 
             // We want to download every video in this list
             foreach (YouTubeVideo video in rawVideoList)
             {
-                Console.WriteLine(String.Format("\"{0}\"", video.VideoTitle));
+                Program.WriteToConsole(String.Format("\"{0}\"", video.VideoTitle));
 
                 if (settings.Action != SYMMSettings.Actions.Stream)
                 {
@@ -136,7 +144,7 @@ namespace Flash_dl
                     if (settings.CheckDuplicate && Directory.GetFiles(settings.SavePath, settings.PathSafefileName + ".*").Length > 0)
                     {
                         // Looks like we downloaded that already. Skip.
-                        Console.WriteLine(String.Format("Looks like we already downloaded \"{0}\".\nSet 'settings.duplicatecheck' to false to ignore this.", video.VideoTitle));
+                        Program.WriteToConsole(String.Format("Looks like we already downloaded \"{0}\".\nSet 'settings.duplicatecheck' to false to ignore this.", video.VideoTitle));
 
                         // Skip the rest
                         continue;

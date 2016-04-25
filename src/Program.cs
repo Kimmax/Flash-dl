@@ -11,18 +11,26 @@ namespace Flash_dl
         const string _commandNamespace = "Flash_dl.Commands";
         static Dictionary<string, Dictionary<string, IEnumerable<ParameterInfo>>> _commandLibraries;
 
-        const string _readPrompt = "\nFlash-dl> ";
+        const string _readPrompt = "Flash-dl> ";
         private const ConsoleColor _readPromtColor = ConsoleColor.DarkGreen;
         private const ConsoleColor _readCommandColor = ConsoleColor.White;
         private const ConsoleColor _promtCommandInvalidParameterColor = ConsoleColor.DarkYellow;
         private const ConsoleColor _promtCommandOutputColor = ConsoleColor.Gray;
         private const ConsoleColor _promtCommandOutputErrorColor = ConsoleColor.Red;
 
+        private static int WriteBlockOffsetLeft = Console.WindowWidth / 5;
+        private static int MaxLines = Console.WindowHeight / 2 +8;
+        private static int MaxWidth = Console.BufferWidth / 2;
+
+        private static int currentY = Console.WindowHeight / 2 +8;
+
+        private static List<string> lines = new List<string>();
+
         static void Main(string[] args)
         {
             Backend.UpdateTitle();
             if (Properties.Settings.Default.SettingsNeedReset)
-                Commands.Settings.Reset(true);
+                // !!!!! DEBUG RMEOVE ME !!!! Commands.Settings.Reset(true);
 
             // Any static classes containing commands for use from the 
             // console are located in the Commands namespace. Load 
@@ -53,6 +61,9 @@ namespace Flash_dl
 
         static void Run()
         {
+            Console.ForegroundColor = _readCommandColor;
+            WriteToConsole(Backend.SayHello());
+
             while (true)
             {  
                 var consoleInput = ReadFromConsole();
@@ -64,7 +75,7 @@ namespace Flash_dl
                     var cmd = new ConsoleCommand(consoleInput);
 
                     // Execute the command:
-                    string result = Execute(cmd);
+                    string[] result = Execute(cmd);
 
                     // Write out the result:
                     WriteToConsole(result);
@@ -79,12 +90,12 @@ namespace Flash_dl
         }
 
 
-        static string Execute(ConsoleCommand command)
+        static string[] Execute(ConsoleCommand command)
         {
             // Validate the class name and command name:
             // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-            string badCommandMessage = command.Name + " not found. Enter 'help' for more information.";
+            string[] badCommandMessage = new string[] { command.Name + " not found. Enter 'help' for more information." };
 
             // Validate the command name:
             if (!_commandLibraries.ContainsKey(command.LibraryClassName))
@@ -115,9 +126,9 @@ namespace Flash_dl
             if (requiredCount > providedCount)
             {
                 Console.ForegroundColor = _promtCommandInvalidParameterColor;
-                return string.Format(
+                return new string[] { string.Format(
                     "Missing required argument. {0} required, {1} optional, {2} provided",
-                    requiredCount, optionalCount, providedCount);
+                    requiredCount, optionalCount, providedCount) };
             }
 
             // Make sure all arguments are coerced to the proper type, and that there is a 
@@ -192,7 +203,7 @@ namespace Flash_dl
                     BindingFlags.IgnoreCase | BindingFlags.InvokeMethod | BindingFlags.Static | BindingFlags.Public,
                     null, null, inputArgs);
                 Console.ForegroundColor = _promtCommandOutputColor;
-                return result.ToString();
+                return (string[])result;
             }
             catch (TargetInvocationException ex)
             {
@@ -370,24 +381,91 @@ namespace Flash_dl
             return result;
         }
 
+        public static void WriteToConsole(string[] messages)
+        {
+            foreach (string message in messages)
+                WriteToConsole(message);
+        }
 
         public static void WriteToConsole(string message = "")
         {
-            if(message.Length > 0)
+            if(message.Length > MaxWidth)
             {
-                Console.WriteLine(message);
+                lines.AddRange(Extensions.GetChunks(message, MaxWidth));
             }
+            else
+            {
+                lines.Add(message);
+            }
+            
+            if(lines.Count > MaxLines)
+            {
+                lines.RemoveRange(0, lines.Count - MaxLines);
+            }
+
+            WriteOutput();
         }
+
+        private static void WriteOutput()
+        {
+            Console.CursorVisible = false;
+            ClearOutput();
+
+            for (int i = 0; i < MaxLines; i++)
+            {
+                try
+                {
+                    Console.SetCursorPosition(WriteBlockOffsetLeft, Console.WindowHeight / 2 + 5 - i);
+                    string line = lines[lines.Count - i];
+
+                    if (line.StartsWith("  "))
+                        Console.ForegroundColor = ConsoleColor.DarkYellow;
+                    else
+                        Console.ForegroundColor = _readCommandColor;
+
+                    Console.Write(line);
+                }
+                catch (ArgumentOutOfRangeException)
+                {
+                    continue;
+                }
+            }
+
+            Console.CursorVisible = false;
+        }
+
+        private static void ClearOutput()
+        {
+            Console.ForegroundColor = ConsoleColor.Black;
+            for (int y = 0; y < Console.WindowHeight; y++)
+            {
+                Console.SetCursorPosition(WriteBlockOffsetLeft, y);
+                Console.Write("".PadLeft(MaxWidth + 10));
+            }
+            Console.ForegroundColor = _readCommandColor;
+        } 
 
         public static string ReadFromConsole(string promptMessage = "")
         {
             // Show a prompt, and get input:
             Console.ForegroundColor = _readPromtColor;
+            Console.SetCursorPosition(WriteBlockOffsetLeft, Console.WindowHeight / 2 +8);
+            Console.WriteLine();
+            Console.SetCursorPosition(WriteBlockOffsetLeft, Console.WindowHeight /2 +8);
             Console.Write(_readPrompt);
             Console.ForegroundColor = _readCommandColor;
             Console.Write(promptMessage);
 
             return Console.ReadLine();
         }
+    }
+}
+
+public static class Extensions
+{
+    public static IEnumerable<string> GetChunks(string str, int maxChunkSize)
+    {
+        for (int i = 0; i < str.Length; i += maxChunkSize)
+            yield return str.Substring(i, Math.Min(maxChunkSize, str.Length - i));
     }
 }

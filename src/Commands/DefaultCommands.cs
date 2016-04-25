@@ -10,7 +10,7 @@ namespace Flash_dl.Commands
     {
         // Method names are a mess currently, need to fix that on the command caller
 
-        public static string Help()
+        public static string[] Help()
         {
             return Backend.Help();
         }
